@@ -504,6 +504,87 @@ body.privacy .money:hover { filter: none; }
   .modal { padding: 20px 18px; }
 }
 
+/* ===== Budgets ===== */
+.budget-list { display: grid; }
+.budget-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) 2fr 110px;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.budget-row:last-child { border-bottom: 0; }
+.budget-cat { display: grid; }
+.budget-cat strong { font-weight: 600; }
+.budget-bar .progress { margin: 0 0 4px; }
+.budget-input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: #0a1423;
+  border-radius: 10px;
+  text-align: right;
+}
+.budget-input:focus { outline: none; border-color: var(--mint); }
+.warn .progress i { background: var(--amber); }
+.over .progress i { background: var(--red); }
+.warn .budget-bar small { color: var(--amber); }
+.over .budget-bar small { color: var(--red); }
+.budget-global.warn .kpi-value { color: var(--amber); }
+.budget-global.over .kpi-value { color: var(--red); }
+.budget-mini .goal-mini-head { font-size: .9rem; }
+.inline-field { margin-top: 12px; }
+
+/* ===== Onglets ===== */
+.tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  padding: 8px 14px;
+  border-radius: 99px;
+  cursor: pointer;
+  font-size: .9rem;
+}
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--mint); color: var(--mint-ink); border-color: transparent; font-weight: 600; }
+
+/* ===== Échéancier ===== */
+.agenda-day { padding: 6px 0 10px; border-bottom: 1px solid var(--line); }
+.agenda-day:last-child { border-bottom: 0; }
+.agenda-date { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 0 2px; }
+.agenda-day .tx { border-bottom: 0; padding: 8px 0; grid-template-columns: 40px 1fr auto; }
+.mini-row.strong { font-weight: 700; border-bottom: 2px solid var(--line); }
+
+/* ===== Dettes ===== */
+.debt { display: flex; flex-direction: column; gap: 4px; }
+.debt.settled { opacity: .65; }
+.debt .note { color: var(--muted); font-style: italic; margin: 6px 0 0; }
+.payments { margin-top: 8px; }
+.payments .mini-row { font-size: .85rem; padding: 5px 0; align-items: center; }
+.payments .icon-btn { padding: 2px 5px; margin-left: 6px; font-size: .75rem; color: var(--muted); }
+.tag-alert { background: #fb718526; color: var(--red); }
+
+/* ===== Historique du patrimoine ===== */
+.history svg { width: 100%; height: 200px; display: block; }
+.history-line { fill: none; stroke: var(--mint); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.history-area { fill: #6ee7b71a; }
+.zero-line { stroke: var(--red); stroke-width: 1; stroke-dasharray: 6 6; vector-effect: non-scaling-stroke; }
+.history-labels { display: grid; grid-template-columns: repeat(12, 1fr); text-align: center; font-size: .72rem; color: var(--muted); margin-top: 6px; }
+
+/* Case à cocher dans un formulaire */
+.form .check { margin-bottom: 0; color: var(--text); }
+
+@media (max-width: 640px) {
+  .budget-row { grid-template-columns: 1fr 96px; gap: 8px 12px; }
+  .budget-row .budget-bar { grid-column: 1 / -1; grid-row: 2; }
+  .history svg { height: 150px; }
+  .history-labels { font-size: .62rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
