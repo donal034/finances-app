@@ -6,9 +6,11 @@
 const NAV = [
   ['dashboard', '⌂', 'Tableau de bord', 'Accueil'],
   ['transactions', '⇄', 'Opérations', 'Opérations'],
+  ['budgets', '◎', 'Budgets', 'Budgets'],
   ['accounts', '🏦', 'Comptes', 'Comptes'],
   ['recurring', '↻', 'Récurrents', 'Récurrents'],
   ['goals', '🎯', 'Objectifs', 'Objectifs'],
+  ['debts', '⚖', 'Dettes et prêts', 'Dettes'],
   ['investments', '📈', 'Investissements', 'Invest.'],
   ['reports', '📊', 'Rapports', 'Rapports'],
   ['settings', '⚙', 'Paramètres', 'Réglages']
@@ -22,8 +24,9 @@ const App = {
 
   init() {
     this.views = {
-      dashboard: Dashboard, transactions: Transactions, accounts: Accounts, recurring: Recurring,
-      goals: Goals, investments: Investments, reports: Reports, settings: Settings
+      dashboard: Dashboard, transactions: Transactions, budgets: Budgets, accounts: Accounts,
+      recurring: Recurring, goals: Goals, debts: Debts, investments: Investments,
+      reports: Reports, settings: Settings
     };
 
     document.getElementById('sideNav').innerHTML = NAV.map(([k, i, label]) =>
@@ -39,7 +42,7 @@ const App = {
       d.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => d.close()));
     });
 
-    [Transactions, Accounts, Recurring, Goals, Investments].forEach(m => m.bindForm());
+    [Transactions, Accounts, Recurring, Goals, Investments, Debts].forEach(m => m.bindForm());
 
     try { if (localStorage.getItem('pilotage-privacy') === '1') document.body.classList.add('privacy'); } catch (e) { /* ignoré */ }
 

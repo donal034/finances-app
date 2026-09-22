@@ -9,11 +9,9 @@ const Settings = {
       ${App.header('Configuration', 'Paramètres')}
       <div class="cards-grid wide">
         <div class="card">
-          <h2>Budget mensuel</h2>
-          <p class="muted small">Plafond de dépenses utilisé par le tableau de bord et les alertes.</p>
-          <div class="field"><label for="setBudget">Montant (€)</label>
-            <input id="setBudget" inputmode="decimal" value="${String(s.monthlyBudget).replace('.', ',')}"></div>
-          <button class="btn primary" id="saveBudget">Enregistrer le budget</button>
+          <h2>Budgets</h2>
+          <p class="muted small">Le budget global et les plafonds par catégorie se règlent dans la page Budgets.</p>
+          <button class="btn" data-nav="budgets">Ouvrir les budgets</button>
         </div>
 
         <div class="card">
@@ -48,19 +46,11 @@ const Settings = {
         </div>
       </div>`;
 
-    el.querySelector('#saveBudget').addEventListener('click', () => this.saveBudget());
     el.querySelector('#saveCats').addEventListener('click', () => this.saveCategories());
     el.querySelector('#exportJson').addEventListener('click', () => this.exportJson());
     el.querySelector('#exportCsv').addEventListener('click', () => this.exportCsv());
     el.querySelector('#importJson').addEventListener('change', e => this.importJson(e.target));
     el.querySelector('#wipeAll').addEventListener('click', () => this.wipe());
-  },
-
-  saveBudget() {
-    const v = U.num(document.getElementById('setBudget').value);
-    if (!(v >= 0)) return App.toast('Budget invalide', 'error');
-    Store.saveSettings({ ...Store.data.settings, monthlyBudget: U.round2(v) }).catch(e => App.fail(e));
-    App.toast('Budget enregistré');
   },
 
   parseList(id) {

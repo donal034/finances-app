@@ -16,12 +16,16 @@
  */
 const DEFAULT_CATEGORIES = {
   expense: ['Logement', 'Alimentation', 'Restaurants', 'Transport', 'Santé', 'Loisirs', 'Abonnements',
-    'Shopping', 'Famille', 'Éducation', 'Voyage', 'Cadeaux', 'Impôts', 'Frais bancaires', 'Autre'],
+    'Shopping', 'Famille', 'Éducation', 'Voyage', 'Cadeaux', 'Impôts', 'Frais bancaires',
+    'Remboursements de dettes', 'Autre'],
   income: ['Salaire', 'Prime', 'Remboursement', 'Aide / Allocation', 'Vente', 'Intérêts', 'Autre revenu']
 };
 
+// Types de comptes utilisés pour le solde prévisionnel (argent disponible au quotidien)
+const CURRENT_ACCOUNT_TYPES = ['checking', 'wallet', 'cash'];
+
 const Store = {
-  COLLECTIONS: ['accounts', 'transactions', 'recurrings', 'goals', 'investments'],
+  COLLECTIONS: ['accounts', 'transactions', 'recurrings', 'goals', 'investments', 'debts'],
   user: null,
   ref: null,
   loaded: false,
@@ -51,7 +55,7 @@ const Store = {
   },
 
   defaultSettings() {
-    return { monthlyBudget: 1500, categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)) };
+    return { monthlyBudget: 1500, categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)), categoryBudgets: [] };
   },
 
   attach() {
@@ -72,7 +76,8 @@ const Store = {
         categories: {
           expense: this.toArray(cats.expense, DEFAULT_CATEGORIES.expense),
           income: this.toArray(cats.income, DEFAULT_CATEGORIES.income)
-        }
+        },
+        categoryBudgets: this.toBudgetList(s.categoryBudgets)
       };
       this.data = d;
 
@@ -96,6 +101,11 @@ const Store = {
   toArray(x, def) {
     const arr = Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.values(x) : null);
     return arr && arr.length ? arr.filter(Boolean).map(String) : [...def];
+  },
+
+  toBudgetList(x) {
+    const arr = Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.values(x) : []);
+    return arr.filter(b => b && b.c && Number(b.a) > 0).map(b => ({ c: String(b.c), a: Number(b.a) }));
   },
 
   /* ---------- Lecture ---------- */
@@ -146,10 +156,122 @@ const Store = {
     return U.round2(b);
   },
 
+  // Patrimoine net = comptes + investissements + ce qu'on me doit − ce que je dois
   netWorth() {
     const accounts = this.activeAccounts().reduce((s, a) => s + this.balance(a.id), 0);
     const inv = this.list('investments').reduce((s, i) => s + (Number(i.currentValue) || 0), 0);
-    return U.round2(accounts + inv);
+    const d = this.debtTotals();
+    return U.round2(accounts + inv + d.owed - d.owe);
+  },
+
+  /* ---------- Budgets par catégorie ---------- */
+
+  budgetStatus(key) {
+    const spent = Object.fromEntries(this.categoryTotals(key, 'expense'));
+    return this.data.settings.categoryBudgets.map(b => {
+      const s = spent[b.c] || 0;
+      const pct = b.a > 0 ? s / b.a * 100 : 0;
+      return { c: b.c, budget: b.a, spent: s, left: U.round2(b.a - s), pct, level: pct >= 100 ? 'over' : pct >= 80 ? 'warn' : 'ok' };
+    }).sort((x, y) => y.pct - x.pct);
+  },
+
+  /* ---------- Dettes et prêts ---------- */
+
+  debtPaid(d, upTo = U.today()) {
+    return U.round2(Object.values(d.payments || {})
+      .filter(p => p && p.date <= upTo)
+      .reduce((s, p) => s + (Number(p.amount) || 0), 0));
+  },
+
+  debtRemaining(d, upTo = U.today()) {
+    if (d.startDate && d.startDate > upTo) return 0;
+    return Math.max(0, U.round2((Number(d.initialAmount) || 0) - this.debtPaid(d, upTo)));
+  },
+
+  // owe : ce que je dois ; owed : ce qu'on me doit
+  debtTotals(upTo = U.today()) {
+    let owe = 0, owed = 0;
+    this.list('debts').forEach(d => {
+      const r = this.debtRemaining(d, upTo);
+      if (d.direction === 'owed') owed += r; else owe += r;
+    });
+    return { owe: U.round2(owe), owed: U.round2(owed) };
+  },
+
+  /* ---------- Historique du patrimoine (calculé, rien n'est stocké) ---------- */
+
+  // Comptes suivis et dettes, en fin de mois. Les investissements sont exclus :
+  // leur valeur passée n'est pas connue.
+  netWorthHistory(n = 12) {
+    const today = U.today();
+    const cur = today.slice(0, 7);
+    return Array.from({ length: n }, (_, i) => {
+      const key = U.addMonths(cur, i - (n - 1));
+      const end = key === cur ? today : U.monthEnd(key);
+      let v = 0, tracked = 0;
+      this.activeAccounts().forEach(a => {
+        if (!a.openingDate || a.openingDate <= end) { v += this.balance(a.id, end); tracked++; }
+      });
+      const d = this.debtTotals(end);
+      return { key, value: U.round2(v + d.owed - d.owe), tracked };
+    });
+  },
+
+  /* ---------- Échéancier et prévisions ---------- */
+
+  // Occurrences récurrentes et échéances de dettes à venir (après aujourd'hui)
+  upcoming(days = 45) {
+    const today = U.today();
+    const end = U.addDays(today, days);
+    const out = [];
+    this.list('recurrings').forEach(r => {
+      if (!r.active || !r.startDate || !(Number(r.amount) > 0)) return;
+      const skipped = r.skipped || {};
+      let key = today.slice(0, 7);
+      if (r.startDate.slice(0, 7) > key) key = r.startDate.slice(0, 7);
+      let guard = 0;
+      while (key <= end.slice(0, 7) && guard++ < 36) {
+        const date = this.occurrenceDate(r, key);
+        if (date > today && date <= end && date >= r.startDate && (!r.endDate || date <= r.endDate)
+            && !skipped[key] && !this.data.transactions[this.recurringTxId(r.id, key)]) {
+          out.push({ date, kind: 'recurring', item: r });
+        }
+        key = U.addMonths(key, 1);
+      }
+    });
+    this.list('debts').forEach(d => {
+      if (d.dueDate && d.dueDate > today && d.dueDate <= end && this.debtRemaining(d) > 0) {
+        out.push({ date: d.dueDate, kind: 'debt', item: d });
+      }
+    });
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  },
+
+  currentAccountIds() {
+    return new Set(this.activeAccounts().filter(a => CURRENT_ACCOUNT_TYPES.includes(a.type)).map(a => a.id));
+  },
+
+  eventEffect(e, ids) {
+    if (e.kind !== 'recurring') return 0;
+    const r = e.item, amt = Number(r.amount) || 0;
+    if (r.type === 'income') return ids.has(r.accountId) ? amt : 0;
+    if (r.type === 'expense') return ids.has(r.accountId) ? -amt : 0;
+    return (ids.has(r.toAccountId) ? amt : 0) - (ids.has(r.accountId) ? amt : 0);
+  },
+
+  // Solde prévu des comptes courants, échéance par échéance
+  projection(days = 45) {
+    const ids = this.currentAccountIds();
+    const start = U.round2([...ids].reduce((s, id) => s + this.balance(id), 0));
+    let run = start;
+    const events = this.upcoming(days).map(e => {
+      const effect = this.eventEffect(e, ids);
+      run = U.round2(run + effect);
+      return { ...e, effect, balance: run };
+    });
+    const monthEnd = U.monthEnd(U.today().slice(0, 7));
+    const endOfMonth = events.filter(e => e.date <= monthEnd).reduce((b, e) => e.balance, start);
+    return { start, events, endOfMonth, monthEnd, hasCurrent: ids.size > 0 };
   },
 
   // Les virements internes ne sont ni des revenus ni des dépenses
@@ -207,6 +329,10 @@ const Store = {
     }
     o.updatedAt = Date.now();
     return ref.child(c + '/' + o.id).set(this.clean(o)).then(() => o);
+  },
+
+  applyUpdates(u) {
+    return this.requireRef().update(u);
   },
 
   remove(c, id) {

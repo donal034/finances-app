@@ -60,6 +60,21 @@ const U = {
     return (y2 - y1) * 12 + (m2 - m1);
   },
 
+  addDays(dateStr, n) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return U.isoDate(new Date(y, m - 1, d + n));
+  },
+
+  monthEnd(key) {
+    return `${key}-${String(U.daysInMonth(key)).padStart(2, '0')}`;
+  },
+
+  weekday(s) {
+    const [y, m, d] = s.split('-').map(Number);
+    const w = new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  },
+
   daysInMonth(key) {
     const [y, m] = key.split('-').map(Number);
     return new Date(y, m, 0).getDate();

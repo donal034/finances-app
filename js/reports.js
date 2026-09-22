@@ -55,12 +55,52 @@ const Reports = {
         </article>
 
         <article class="card span-12">
+          <div class="card-head"><h2>Évolution du patrimoine sur 12 mois</h2>
+            <span class="muted small">Comptes et dettes, hors investissements</span></div>
+          ${this.historyChart()}
+        </article>
+
+        <article class="card span-12">
           <div class="card-head"><h2>Principales dépenses de ${year}</h2></div>
           ${yCats.length ? `<div class="bars">${yCats.map(([c, v]) => `
             <div class="bar-row"><span>${U.esc(c)}</span>
               <div class="bar"><i style="width:${v / maxCat * 100}%"></i></div>${U.money(v)}</div>`).join('')}</div>`
             : '<p class="empty">Pas encore de dépenses cette année.</p>'}
         </article>
+      </div>`;
+  },
+
+  historyChart() {
+    const hist = Store.netWorthHistory(12);
+    const pts = hist.filter(h => h.tracked > 0);
+    if (pts.length < 2) {
+      return '<p class="empty">La courbe apparaîtra dès que tes comptes auront au moins deux mois d’historique. Pour l’enrichir, date le solde de départ de tes comptes plus tôt et saisis les opérations depuis cette date.</p>';
+    }
+    const vals = hist.map(h => h.value);
+    let min = Math.min(...vals), max = Math.max(...vals);
+    if (min === max) { min -= 1; max += 1; }
+    const W = 1000, H = 220, pad = 12;
+    const x = i => pad + i * (W - 2 * pad) / (hist.length - 1);
+    const y = v => H - pad - (v - min) / (max - min) * (H - 2 * pad);
+    const first = hist.findIndex(h => h.tracked > 0);
+    const line = hist.map((h, i) => `${x(i).toFixed(1)},${y(h.value).toFixed(1)}`).slice(first).join(' ');
+    const area = `${x(first).toFixed(1)},${H - pad} ${line} ${x(hist.length - 1).toFixed(1)},${H - pad}`;
+    const zero = min < 0 && max > 0 ? `<line x1="${pad}" x2="${W - pad}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" class="zero-line"/>` : '';
+    const last = hist[hist.length - 1], start = hist[first];
+    const diff = U.round2(last.value - start.value);
+    return `
+      <div class="history">
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Évolution du patrimoine : de ${U.eur(start.value)} à ${U.eur(last.value)}">
+          <polygon points="${area}" class="history-area"/>
+          ${zero}
+          <polyline points="${line}" class="history-line" vector-effect="non-scaling-stroke"/>
+        </svg>
+        <div class="history-labels">${hist.map(h => `<span title="${U.monthLabel(h.key)} : ${U.eur(h.value)}">${U.monthShort(h.key)}</span>`).join('')}</div>
+      </div>
+      <div class="summary-table compact">
+        <div><span>${U.monthLabel(start.key)}</span>${U.money(start.value)}</div>
+        <div><span>Aujourd’hui</span>${U.money(last.value)}</div>
+        <div class="total"><span>Évolution</span>${U.money(diff, diff >= 0 ? 'positive' : 'negative')}</div>
       </div>`;
   }
 };
