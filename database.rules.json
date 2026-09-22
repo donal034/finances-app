@@ -5,7 +5,115 @@
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid"
+        ".write": "auth != null && auth.uid === $uid",
+
+        "accounts": {
+          "$id": {
+            ".validate": "newData.hasChildren(['id', 'name', 'initialBalance', 'openingDate'])",
+            "id": { ".validate": "newData.val() === $id" },
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
+            "bank": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "type": { ".validate": "newData.isString() && newData.val().length <= 30" },
+            "initialBalance": { ".validate": "newData.isNumber() && newData.val() > -100000000 && newData.val() < 100000000" },
+            "openingDate": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+            "archived": { ".validate": "newData.isBoolean()" }
+          }
+        },
+
+        "transactions": {
+          "$id": {
+            ".validate": "newData.hasChildren(['id', 'type', 'label', 'amount', 'date'])",
+            "id": { ".validate": "newData.val() === $id" },
+            "type": { ".validate": "newData.isString() && newData.val().matches(/^(income|expense|transfer)$/)" },
+            "label": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 200" },
+            "amount": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100000000" },
+            "date": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+            "category": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "note": { ".validate": "newData.isString() && newData.val().length <= 500" },
+            "accountId": { ".validate": "newData.isString()" },
+            "toAccountId": { ".validate": "newData.isString()" },
+            "recurringId": { ".validate": "newData.isString()" },
+            "debtId": { ".validate": "newData.isString()" }
+          }
+        },
+
+        "recurrings": {
+          "$id": {
+            ".validate": "newData.hasChildren(['id', 'type', 'label', 'amount', 'day', 'startDate'])",
+            "id": { ".validate": "newData.val() === $id" },
+            "type": { ".validate": "newData.isString() && newData.val().matches(/^(income|expense|transfer)$/)" },
+            "kind": { ".validate": "newData.isString() && newData.val().matches(/^(standard|subscription)$/)" },
+            "label": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 200" },
+            "amount": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100000000" },
+            "day": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 31" },
+            "startDate": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+            "endDate": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+            "active": { ".validate": "newData.isBoolean()" },
+            "category": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "accountId": { ".validate": "newData.isString()" },
+            "toAccountId": { ".validate": "newData.isString()" },
+            "skipped": {
+              "$month": { ".validate": "newData.isBoolean()" }
+            }
+          }
+        },
+
+        "goals": {
+          "$id": {
+            ".validate": "newData.hasChildren(['id', 'name', 'target'])",
+            "id": { ".validate": "newData.val() === $id" },
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
+            "icon": { ".validate": "newData.isString() && newData.val().length <= 16" },
+            "target": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100000000" },
+            "saved": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 100000000" },
+            "deadline": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+            "accountId": { ".validate": "newData.isString()" }
+          }
+        },
+
+        "investments": {
+          "$id": {
+            ".validate": "newData.hasChildren(['id', 'name', 'amount', 'currentValue'])",
+            "id": { ".validate": "newData.val() === $id" },
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
+            "amount": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100000000" },
+            "currentValue": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 100000000" },
+            "date": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" }
+          }
+        },
+
+        "debts": {
+          "$id": {
+            ".validate": "newData.hasChildren(['id', 'name', 'direction', 'initialAmount', 'startDate'])",
+            "id": { ".validate": "newData.val() === $id" },
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
+            "direction": { ".validate": "newData.isString() && newData.val().matches(/^(owe|owed)$/)" },
+            "initialAmount": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100000000" },
+            "startDate": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+            "dueDate": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+            "note": { ".validate": "newData.isString() && newData.val().length <= 500" },
+            "payments": {
+              "$pid": {
+                ".validate": "newData.hasChildren(['amount', 'date'])",
+                "amount": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100000000" },
+                "date": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" }
+              }
+            }
+          }
+        },
+
+        "settings": {
+          "monthlyBudget": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 100000000" },
+          "categoryBudgets": {
+            "$i": {
+              ".validate": "newData.hasChildren(['c', 'a'])",
+              "c": { ".validate": "newData.isString() && newData.val().length <= 100" },
+              "a": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 100000000" }
+            }
+          }
+        },
+
+        "$other": { ".validate": false }
       }
     }
   }

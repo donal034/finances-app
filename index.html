@@ -7,6 +7,12 @@
   <meta name="description" content="Suivi personnel des comptes, dépenses, objectifs et investissements, synchronisé entre appareils.">
   <title>Mon Pilotage Financier</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b1220'/%3E%3Cpath d='M18 39c8 8 20 8 28 0M18 25c8-8 20-8 28 0' stroke='%236ee7b7' stroke-width='6' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pilotage">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -49,9 +55,11 @@
   <main class="main">
     <section class="section" id="sec-dashboard"></section>
     <section class="section" id="sec-transactions"></section>
+    <section class="section" id="sec-budgets"></section>
     <section class="section" id="sec-accounts"></section>
     <section class="section" id="sec-recurring"></section>
     <section class="section" id="sec-goals"></section>
+    <section class="section" id="sec-debts"></section>
     <section class="section" id="sec-investments"></section>
     <section class="section" id="sec-reports"></section>
     <section class="section" id="sec-settings"></section>
@@ -144,6 +152,7 @@
     <div class="field"><label for="recAccount">Compte</label><select id="recAccount"></select></div>
     <div class="field" id="fieldRecTo" hidden><label for="recToAccount">Vers le compte</label><select id="recToAccount"></select></div>
     <div class="field" id="fieldRecCat"><label for="recCategory">Catégorie</label><select id="recCategory"></select></div>
+    <label class="check" id="fieldRecSub"><input type="checkbox" id="recSub"> C’est un abonnement (téléphone, streaming, salle de sport…)</label>
     <div class="row-2">
       <div class="field"><label for="recStart">À partir du</label><input id="recStart" type="date"></div>
       <div class="field"><label for="recEnd">Jusqu’au (facultatif)</label><input id="recEnd" type="date"></div>
@@ -196,6 +205,52 @@
   </form>
 </dialog>
 
+<!-- Dialogue : dette ou prêt -->
+<dialog id="dlgDebt">
+  <form class="modal form" id="debtForm" novalidate>
+    <h2 id="debtTitle">Nouvelle dette ou prêt</h2>
+    <div class="field">
+      <label for="debtDirection">Sens</label>
+      <select id="debtDirection">
+        <option value="owe">Je dois de l’argent</option>
+        <option value="owed">On me doit de l’argent</option>
+      </select>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="debtName">Personne ou organisme</label><input id="debtName" maxlength="80" placeholder="Ex. Prêt étudiant, Paul"></div>
+      <div class="field"><label for="debtKind">Nature</label><select id="debtKind"></select></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="debtAmount">Montant total (€)</label><input id="debtAmount" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="debtStart">Depuis le</label><input id="debtStart" type="date"></div>
+    </div>
+    <div class="field"><label for="debtDue">Échéance de remboursement (facultatif)</label><input id="debtDue" type="date"></div>
+    <div class="field"><label for="debtNote">Note (facultatif)</label><input id="debtNote" maxlength="300"></div>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close>Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Dialogue : remboursement -->
+<dialog id="dlgPayment">
+  <form class="modal form" id="payForm" novalidate>
+    <h2>Enregistrer un remboursement</h2>
+    <p id="payInfo"></p>
+    <div class="row-2">
+      <div class="field"><label for="payAmount">Montant (€)</label><input id="payAmount" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="payDate">Date</label><input id="payDate" type="date"></div>
+    </div>
+    <div class="field"><label for="payAccount" id="lblPayAccount">Compte (facultatif)</label><select id="payAccount"></select></div>
+    <p class="hint">Si tu choisis un compte, l’opération y est créée automatiquement pour que son solde reste juste.</p>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close>Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- Firebase (version "compat" : fonctionne avec des balises script classiques) -->
@@ -208,6 +263,8 @@
 <script src="js/utils.js"></script>
 <script src="js/store.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/budgets.js"></script>
+<script src="js/debts.js"></script>
 <script src="js/accounts.js"></script>
 <script src="js/transactions.js"></script>
 <script src="js/recurring.js"></script>
