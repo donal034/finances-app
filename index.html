@@ -405,13 +405,17 @@
 <!-- Toast Notification -->
 <div class="toast" id="toast">Opération enregistrée</div>
 
-<!-- Firebase SDK -->
+<!-- Firebase SDK (DOIT être EN PREMIER) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
 
-<!-- Scripts -->
+<!-- Firebase Initialization -->
 <script src="js/firebase-init.js"></script>
-<script src="js/storage-firebase.js"></script>
+
+<!-- Storage (Firebase) -->
+<script src="js/storage.js"></script>
+
+<!-- App Scripts -->
 <script src="js/app.js"></script>
 <script src="js/accounts.js"></script>
 <script src="js/transactions.js"></script>
