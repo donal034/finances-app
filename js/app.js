@@ -1,344 +1,247 @@
 /**
- * App Main Controller
- * Gère la navigation, les mises à jour globales et le dashboard
+ * Contrôleur principal : écrans (connexion / chargement / app),
+ * navigation, connexion Google, dialogues et notifications.
+ * Chargé en dernier : tous les modules de vue existent déjà.
  */
+const NAV = [
+  ['dashboard', '⌂', 'Tableau de bord', 'Accueil'],
+  ['transactions', '⇄', 'Opérations', 'Opérations'],
+  ['accounts', '🏦', 'Comptes', 'Comptes'],
+  ['recurring', '↻', 'Récurrents', 'Récurrents'],
+  ['goals', '🎯', 'Objectifs', 'Objectifs'],
+  ['investments', '📈', 'Investissements', 'Invest.'],
+  ['reports', '📊', 'Rapports', 'Rapports'],
+  ['settings', '⚙', 'Paramètres', 'Réglages']
+];
 
 const App = {
-    // INIT
-    init() {
-        this.setupEventListeners();
-        this.setupNavigation();
-        this.renderDashboard();
-        this.setDateInputToday();
-    },
+  section: 'dashboard',
+  month: U.today().slice(0, 7),
+  views: null,
+  toastTimer: null,
 
-    // SETUP
-    setupEventListeners() {
-        // Dialog triggers
-        document.getElementById('openAddTransaction').addEventListener('click', () => {
-            document.getElementById('addTransactionDialog').showModal();
-            document.getElementById('txDate').valueAsDate = new Date();
-        });
-        document.getElementById('openAddTransaction2').addEventListener('click', () => {
-            document.getElementById('addTransactionDialog').showModal();
-            document.getElementById('txDate').valueAsDate = new Date();
-        });
-        document.getElementById('openAddAccount').addEventListener('click', () => {
-            document.getElementById('addAccountDialog').showModal();
-        });
-        document.getElementById('openAddInvestment').addEventListener('click', () => {
-            document.getElementById('addInvestmentDialog').showModal();
-            document.getElementById('invDate').valueAsDate = new Date();
-        });
+  init() {
+    this.views = {
+      dashboard: Dashboard, transactions: Transactions, accounts: Accounts, recurring: Recurring,
+      goals: Goals, investments: Investments, reports: Reports, settings: Settings
+    };
 
-        // Dialog cancels
-        document.getElementById('cancelTransaction').addEventListener('click', () => {
-            document.getElementById('addTransactionDialog').close();
-        });
-        document.getElementById('cancelAccount').addEventListener('click', () => {
-            document.getElementById('addAccountDialog').close();
-        });
-        document.getElementById('cancelInvestment').addEventListener('click', () => {
-            document.getElementById('addInvestmentDialog').close();
-        });
+    document.getElementById('sideNav').innerHTML = NAV.map(([k, i, label]) =>
+      `<button class="nav-btn" data-nav="${k}"><span class="icon" aria-hidden="true">${i}</span><span>${label}</span></button>`).join('');
+    document.getElementById('mobileNav').innerHTML = NAV.map(([k, i, , short]) =>
+      `<button class="mnav-btn" data-nav="${k}"><b aria-hidden="true">${i}</b><span>${short}</span></button>`).join('');
 
-        // Form submissions
-        document.getElementById('accountForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            Accounts.handleAddAccount();
-        });
-        document.getElementById('transactionForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            Transactions.handleAddTransaction();
-        });
-        document.getElementById('investmentForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            Investments.handleAddInvestment();
-        });
+    document.addEventListener('click', e => this.onClick(e));
+    document.getElementById('btnLogin').addEventListener('click', () => this.signIn());
 
-        // Settings
-        document.getElementById('settingsBudget').addEventListener('change', () => {
-            this.handleSettingChange();
-        });
-        document.getElementById('settingsGoalName').addEventListener('change', () => {
-            this.handleSettingChange();
-        });
-        document.getElementById('settingsGoalAmount').addEventListener('change', () => {
-            this.handleSettingChange();
-        });
-        document.getElementById('settingsGoalIcon').addEventListener('change', () => {
-            this.handleSettingChange();
-        });
+    document.querySelectorAll('dialog').forEach(d => {
+      d.addEventListener('click', e => { if (e.target === d) d.close(); });
+      d.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => d.close()));
+    });
 
-        document.getElementById('exportData').addEventListener('click', () => {
-            this.exportData();
-        });
-        document.getElementById('resetData').addEventListener('click', () => {
-            if (confirm('Êtes-vous sûr ? Cette action est irréversible.')) {
-                Storage.resetAll();
-                location.reload();
-            }
-        });
-    },
+    [Transactions, Accounts, Recurring, Goals, Investments].forEach(m => m.bindForm());
 
-    setupNavigation() {
-        const navButtons = document.querySelectorAll('.nav-btn, .mobile-nav-btn');
-        navButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const section = btn.dataset.section;
-                this.switchSection(section);
-            });
-        });
-    },
+    try { if (localStorage.getItem('pilotage-privacy') === '1') document.body.classList.add('privacy'); } catch (e) { /* ignoré */ }
 
-    // NAVIGATION
-    switchSection(section) {
-        // Hide all sections
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        // Show selected section
-        document.getElementById(section).classList.add('active');
+    // Retour d'une connexion par redirection (téléphones qui bloquent les pop-ups)
+    auth.getRedirectResult().catch(e => this.showLoginError(e));
 
-        // Update nav buttons
-        document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.section === section) {
-                btn.classList.add('active');
-            }
-        });
+    Store.init();
+  },
 
-        // Render section content
-        if (section === 'dashboard') {
-            this.renderDashboard();
-        } else if (section === 'accounts') {
-            Accounts.render();
-        } else if (section === 'transactions') {
-            Transactions.render();
-        } else if (section === 'investments') {
-            Investments.render();
-        } else if (section === 'reports') {
-            Reports.render();
-        } else if (section === 'settings') {
-            this.renderSettings();
-        }
-    },
+  /* ---------- Écrans ---------- */
 
-    // DASHBOARD RENDERING
-    renderDashboard() {
-        this.renderDashboardCards();
-        this.renderBudgetChart();
-        this.renderGoalProgress();
-        this.renderRecentTransactions();
-        this.renderCategoryBreakdown();
-    },
+  show(id) {
+    ['loginScreen', 'loadingScreen', 'app'].forEach(x => { document.getElementById(x).hidden = x !== id; });
+    const inApp = id === 'app';
+    document.getElementById('mobileNav').hidden = !inApp;
+    document.getElementById('fab').hidden = !inApp;
+  },
 
-    renderDashboardCards() {
-        const accounts = Storage.getAccounts();
-        const transactions = Storage.getTransactions();
-        const thisMonth = this.getThisMonthTransactions();
+  showLogin() {
+    document.querySelectorAll('dialog[open]').forEach(d => d.close());
+    this.show('loginScreen');
+  },
 
-        // Total assets
-        const totalAssets = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-        document.getElementById('totalAssets').textContent = this.formatCurrency(totalAssets);
+  showLoading() {
+    document.getElementById('loadingMsg').textContent = 'Chargement de tes données…';
+    document.getElementById('loadingActions').hidden = true;
+    this.show('loadingScreen');
+  },
 
-        // Monthly income
-        const income = thisMonth
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
-        document.getElementById('monthlyIncome').textContent = this.formatCurrency(income);
+  onData(first) {
+    if (first) this.show('app');
+    this.renderUser();
+    this.render();
+  },
 
-        // Monthly expenses
-        const expenses = thisMonth
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
-        document.getElementById('monthlyExpenses').textContent = this.formatCurrency(expenses);
-    },
+  onDataError(err) {
+    console.error(err);
+    const denied = String(err && (err.code || err.message)).toLowerCase().includes('permission');
+    document.getElementById('loadingMsg').textContent = denied
+      ? 'Accès refusé par la base de données. Vérifie que les règles de sécurité sont publiées (voir README, étape 3).'
+      : `Impossible de charger les données : ${err.message || err}`;
+    document.getElementById('loadingActions').hidden = false;
+    this.show('loadingScreen');
+  },
 
-    renderBudgetChart() {
-        const settings = Storage.getSettings();
-        const thisMonth = this.getThisMonthTransactions();
-        const expenses = thisMonth
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
+  renderUser() {
+    const u = Store.user;
+    document.getElementById('userInfo').textContent = u ? (u.displayName || u.email || '') : '';
+  },
 
-        const budget = settings.monthlyBudget || 1500;
-        const pct = Math.min(100, Math.round((expenses / budget) * 100));
+  firstName() {
+    const u = Store.user;
+    return u && u.displayName ? u.displayName.split(' ')[0] : '';
+  },
 
-        document.getElementById('donut').style.setProperty('--pct', pct + '%');
-        document.getElementById('budgetPct').textContent = pct + '%';
-        document.getElementById('budgetText').textContent = `${this.formatCurrency(expenses)} / ${this.formatCurrency(budget)}`;
-    },
+  /* ---------- Navigation et rendu ---------- */
 
-    renderGoalProgress() {
-        const settings = Storage.getSettings();
-        const investments = Storage.getInvestments();
-        const savings = investments
-            .filter(inv => inv.type === 'savings' || inv.category === 'Épargne')
-            .reduce((sum, inv) => sum + inv.currentValue, 0);
+  render() {
+    const el = document.getElementById('sec-' + this.section);
+    document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s === el));
+    document.querySelectorAll('[data-nav]').forEach(b => {
+      if (b.classList.contains('nav-btn') || b.classList.contains('mnav-btn')) {
+        b.classList.toggle('active', b.dataset.nav === this.section);
+      }
+    });
+    const view = this.views[this.section];
+    if (view && el) view.render(el);
+  },
 
-        const goalAmount = settings.goalAmount || 3500;
-        const pct = Math.round((savings / goalAmount) * 100);
+  go(section) {
+    if (!this.views[section]) return;
+    this.section = section;
+    this.render();
+    try { window.scrollTo(0, 0); } catch (e) { /* ignoré */ }
+  },
 
-        document.getElementById('goalIcon').textContent = settings.goalIcon || '🎯';
-        document.getElementById('goalName').textContent = settings.goalName || 'Objectif principal';
-        document.getElementById('goalBar').style.width = Math.min(100, pct) + '%';
-        document.getElementById('goalSaved').textContent = this.formatCurrency(savings);
-        document.getElementById('goalTarget').textContent = this.formatCurrency(goalAmount);
-    },
+  onClick(e) {
+    const nav = e.target.closest('[data-nav]');
+    if (nav) return this.go(nav.dataset.nav);
 
-    renderRecentTransactions() {
-        const thisMonth = this.getThisMonthTransactions();
-        const recent = thisMonth
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 6);
+    const cmd = e.target.closest('[data-cmd]');
+    if (cmd) return this.cmd(cmd.dataset.cmd);
 
-        const icons = {
-            'Salaire': '↓',
-            'Bonus': '💰',
-            'Logement': '⌂',
-            'Alimentation': '◉',
-            'Transport': '➜',
-            'Loisirs': '♪',
-            'Santé': '⚕️',
-            'Épargne': '◇',
-            'Autre': '•'
-        };
-
-        const txList = document.getElementById('txList');
-        if (recent.length === 0) {
-            txList.innerHTML = '<div class="empty">Aucune opération ce mois-ci.</div>';
-            document.getElementById('txCount').textContent = '0';
-        } else {
-            txList.innerHTML = recent.map(t => `
-                <div class="tx">
-                    <span class="ico">${icons[t.category] || '•'}</span>
-                    <div>
-                        <strong>${this.escapeHtml(t.label)}</strong>
-                        <br>
-                        <small>${t.category} · ${new Date(t.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</small>
-                    </div>
-                    <b class="${t.type === 'income' ? 'positive' : 'negative'}">
-                        ${t.type === 'income' ? '+' : '−'} ${this.formatCurrency(t.amount)}
-                    </b>
-                </div>
-            `).join('');
-            document.getElementById('txCount').textContent = recent.length + ' opérations';
-        }
-    },
-
-    renderCategoryBreakdown() {
-        const thisMonth = this.getThisMonthTransactions();
-        const categories = {};
-
-        thisMonth
-            .filter(t => t.type === 'expense')
-            .forEach(t => {
-                categories[t.category] = (categories[t.category] || 0) + t.amount;
-            });
-
-        const colors = {
-            'Logement': '#60a5fa',
-            'Alimentation': '#fb923c',
-            'Transport': '#f472b6',
-            'Loisirs': '#a78bfa',
-            'Santé': '#fb7185',
-            'Épargne': '#6ee7b7',
-            'Autre': '#94a3b8'
-        };
-
-        const sorted = Object.entries(categories).sort((a, b) => b[1] - a[1]);
-        const max = Math.max(...Object.values(categories), 1);
-
-        const bars = document.getElementById('categoryBars');
-        if (sorted.length === 0) {
-            bars.innerHTML = '<div class="empty">Pas de dépenses ce mois-ci.</div>';
-        } else {
-            bars.innerHTML = sorted.map(([cat, amount]) => `
-                <div class="bar-row">
-                    <span>${cat}</span>
-                    <div class="bar"><i style="width: ${(amount/max)*100}%; background: ${colors[cat] || colors.Autre}"></i></div>
-                    <b>${this.formatCurrency(amount)}</b>
-                </div>
-            `).join('');
-        }
-    },
-
-    // SETTINGS RENDERING
-    renderSettings() {
-        const settings = Storage.getSettings();
-        document.getElementById('settingsBudget').value = settings.monthlyBudget;
-        document.getElementById('settingsGoalName').value = settings.goalName;
-        document.getElementById('settingsGoalAmount').value = settings.goalAmount;
-        document.getElementById('settingsGoalIcon').value = settings.goalIcon;
-    },
-
-    handleSettingChange() {
-        const settings = {
-            monthlyBudget: parseFloat(document.getElementById('settingsBudget').value) || 1500,
-            goalName: document.getElementById('settingsGoalName').value || 'Objectif principal',
-            goalAmount: parseFloat(document.getElementById('settingsGoalAmount').value) || 3500,
-            goalIcon: document.getElementById('settingsGoalIcon').value || '🎯'
-        };
-        Storage.saveSettings(settings);
-        this.showToast('Paramètres enregistrés');
-        this.renderDashboard();
-    },
-
-    // UTILITIES
-    getThisMonthTransactions() {
-        const today = new Date();
-        const currentMonth = today.getMonth();
-        const currentYear = today.getFullYear();
-
-        return Storage.getTransactions().filter(t => {
-            const d = new Date(t.date);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        });
-    },
-
-    formatCurrency(amount) {
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR',
-            maximumFractionDigits: 2
-        }).format(amount);
-    },
-
-    escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    },
-
-    setDateInputToday() {
-        const today = new Date().toISOString().split('T')[0];
-        const dateInputs = document.querySelectorAll('input[type="date"]');
-        dateInputs.forEach(input => {
-            if (!input.value) {
-                input.value = today;
-            }
-        });
-    },
-
-    showToast(message) {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2200);
-    },
-
-    exportData() {
-        const data = Storage.exportData();
-        const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `pilotage-export-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        this.showToast('Données exportées');
+    const act = e.target.closest('[data-act]');
+    if (act) {
+      const [view, fn] = act.dataset.act.split('.');
+      const mod = this.views[view];
+      if (mod && typeof mod[fn] === 'function') mod[fn](act.dataset.id, act);
     }
+  },
+
+  cmd(name) {
+    switch (name) {
+      case 'prevMonth': this.month = U.addMonths(this.month, -1); this.render(); break;
+      case 'nextMonth': this.month = U.addMonths(this.month, 1); this.render(); break;
+      case 'thisMonth': this.month = U.today().slice(0, 7); this.render(); break;
+      case 'quickAdd': Transactions.openNew(); break;
+      case 'privacy': {
+        const on = document.body.classList.toggle('privacy');
+        try { localStorage.setItem('pilotage-privacy', on ? '1' : '0'); } catch (e) { /* ignoré */ }
+        this.toast(on ? 'Mode discret activé' : 'Mode discret désactivé');
+        break;
+      }
+      case 'logout':
+        if (confirm('Se déconnecter ?')) auth.signOut();
+        break;
+    }
+  },
+
+  header(eyebrow, title, actions = '') {
+    return `<header class="top">
+      <div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div>
+      ${actions ? `<div class="actions">${actions}</div>` : ''}
+    </header>`;
+  },
+
+  monthNav() {
+    const isCurrent = this.month === U.today().slice(0, 7);
+    return `<div class="month-nav">
+      <button class="round" data-cmd="prevMonth" aria-label="Mois précédent">‹</button>
+      <strong>${U.monthLabel(this.month)}</strong>
+      <button class="round" data-cmd="nextMonth" aria-label="Mois suivant">›</button>
+      ${isCurrent ? '' : '<button class="link" data-cmd="thisMonth">Revenir au mois en cours</button>'}
+    </div>`;
+  },
+
+  accountOptions(selected, { none = null, all = false } = {}) {
+    const accs = Store.list('accounts')
+      .filter(a => all || !a.archived || a.id === selected)
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    return (none !== null ? `<option value="">${U.esc(none)}</option>` : '') +
+      accs.map(a => `<option value="${U.esc(a.id)}" ${a.id === selected ? 'selected' : ''}>${U.esc(a.name)}${a.archived ? ' (archivé)' : ''}</option>`).join('');
+  },
+
+  categoryOptions(type, selected) {
+    const list = [...(Store.data.settings.categories[type] || [])];
+    if (selected && !list.includes(selected)) list.push(selected);
+    return list.map(c => `<option value="${U.esc(c)}" ${c === selected ? 'selected' : ''}>${U.esc(c)}</option>`).join('');
+  },
+
+  /* ---------- Dialogues et notifications ---------- */
+
+  openDialog(id) {
+    const d = document.getElementById(id);
+    if (d && !d.open) d.showModal();
+  },
+
+  closeDialog(id) {
+    const d = document.getElementById(id);
+    if (d && d.open) d.close();
+  },
+
+  toast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => { t.className = 'toast'; }, type === 'error' ? 4000 : 2200);
+  },
+
+  fail(err) {
+    console.error(err);
+    const msg = String(err && (err.code || err.message) || err);
+    this.toast(msg.toLowerCase().includes('permission')
+      ? 'Écriture refusée par la base : vérifie les règles de sécurité'
+      : 'Erreur : ' + (err.message || msg), 'error');
+  },
+
+  /* ---------- Connexion Google ---------- */
+
+  async signIn() {
+    document.getElementById('loginError').hidden = true;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      await auth.signInWithPopup(provider);
+    } catch (e) {
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+        try { await auth.signInWithRedirect(provider); } catch (e2) { this.showLoginError(e2); }
+      } else {
+        this.showLoginError(e);
+      }
+    }
+  },
+
+  showLoginError(e) {
+    if (!e) return;
+    const messages = {
+      'auth/unauthorized-domain': `Ce site n'est pas autorisé. Dans Firebase : Authentication → Paramètres → Domaines autorisés → ajoute « ${location.hostname} ».`,
+      'auth/operation-not-allowed': 'La connexion Google n’est pas activée. Dans Firebase : Authentication → Méthode de connexion → Google → Activer.',
+      'auth/configuration-not-found': 'Authentication n’est pas encore activé dans Firebase. Ouvre Authentication et clique sur « Commencer ».',
+      'auth/popup-closed-by-user': 'Connexion annulée.',
+      'auth/cancelled-popup-request': 'Connexion annulée.',
+      'auth/network-request-failed': 'Pas de connexion internet.',
+      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'Clé API invalide : recopie la configuration Firebase dans js/firebase-config.js.',
+      'auth/invalid-api-key': 'Clé API invalide : recopie la configuration Firebase dans js/firebase-config.js.'
+    };
+    const el = document.getElementById('loginError');
+    el.textContent = messages[e.code] || `Connexion impossible (${e.code || e.message}).`;
+    el.hidden = false;
+    console.error(e);
+  }
 };
 
-// Initialize on DOM ready
-document.addEventListener('DOMContentLoaded', () => App.init());
+App.init();

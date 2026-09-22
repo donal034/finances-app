@@ -1,425 +1,220 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Pilotage Financier</title>
-    <meta name="description" content="Suivi personnalisé de vos finances, investissements et objectifs d'épargne.">
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b1220'/%3E%3Cpath d='M18 39c8 8 20 8 28 0M18 25c8-8 20-8 28 0' stroke='%236ee7b7' stroke-width='6' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23fff'/%3E%3C/svg%3E">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07101c">
+  <meta name="description" content="Suivi personnel des comptes, dépenses, objectifs et investissements, synchronisé entre appareils.">
+  <title>Mon Pilotage Financier</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b1220'/%3E%3Cpath d='M18 39c8 8 20 8 28 0M18 25c8-8 20-8 28 0' stroke='%236ee7b7' stroke-width='6' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-<div class="app">
-    <!-- SIDEBAR NAVIGATION -->
-    <aside class="sidebar">
-        <div class="brand">
-            <span class="brand-mark">€</span>
-            <span>Mon Pilotage</span>
-        </div>
-        <nav class="nav">
-            <button class="nav-btn active" data-section="dashboard">
-                <span class="icon">⌂</span>
-                <span>Tableau de bord</span>
-            </button>
-            <button class="nav-btn" data-section="accounts">
-                <span class="icon">🏦</span>
-                <span>Comptes</span>
-            </button>
-            <button class="nav-btn" data-section="transactions">
-                <span class="icon">⇄</span>
-                <span>Opérations</span>
-            </button>
-            <button class="nav-btn" data-section="investments">
-                <span class="icon">📈</span>
-                <span>Investissements</span>
-            </button>
-            <button class="nav-btn" data-section="reports">
-                <span class="icon">📊</span>
-                <span>Rapports</span>
-            </button>
-            <button class="nav-btn" data-section="settings">
-                <span class="icon">⚙️</span>
-                <span>Paramètres</span>
-            </button>
-        </nav>
-        <div class="privacy">
-            🔒 Vos données restent enregistrées uniquement sur cet appareil.
-        </div>
-    </aside>
 
-    <!-- MAIN CONTENT -->
-    <main class="main">
-        <!-- DASHBOARD SECTION -->
-        <section id="dashboard" class="section active">
-            <header class="top">
-                <div>
-                    <div class="eyebrow">Bienvenue</div>
-                    <h1>Vos finances, en un coup d'œil</h1>
-                </div>
-                <div class="actions">
-                    <button class="btn" id="openAddTransaction">＋ Ajouter une opération</button>
-                </div>
-            </header>
-
-            <div class="grid">
-                <!-- Total Assets Card -->
-                <article class="card balance" style="grid-column: span 4">
-                    <div class="card-head">
-                        <h2>Patrimoine total</h2>
-                    </div>
-                    <div class="amount" id="totalAssets">0 €</div>
-                    <div class="trend" id="assetsTrend">● À jour</div>
-                </article>
-
-                <!-- Monthly Income Card -->
-                <article class="card" style="grid-column: span 4">
-                    <div class="card-head">
-                        <h2>Revenus (ce mois)</h2>
-                    </div>
-                    <div class="amount" id="monthlyIncome" style="color: var(--mint); font-size: 2rem;">0 €</div>
-                </article>
-
-                <!-- Monthly Expenses Card -->
-                <article class="card" style="grid-column: span 4">
-                    <div class="card-head">
-                        <h2>Dépenses (ce mois)</h2>
-                    </div>
-                    <div class="amount" id="monthlyExpenses" style="color: var(--red); font-size: 2rem;">0 €</div>
-                </article>
-
-                <!-- Budget Tracking -->
-                <article class="card budget" style="grid-column: span 5">
-                    <div class="card-head">
-                        <h2>Budget mensuel</h2>
-                        <span id="budgetText">0 € / 1 500 €</span>
-                    </div>
-                    <div class="donut-wrap">
-                        <div class="donut" id="donut">
-                            <strong id="budgetPct">0%</strong>
-                        </div>
-                        <div class="legend">
-                            <span><i class="dot" style="background:var(--mint)"></i>Dépensé</span>
-                            <span><i class="dot" style="background:#26364d"></i>Disponible</span>
-                        </div>
-                    </div>
-                </article>
-
-                <!-- Savings Goal -->
-                <article class="card objective" style="grid-column: span 3">
-                    <div class="card-head">
-                        <h2>Objectif principal</h2>
-                    </div>
-                    <div class="goal-icon" id="goalIcon">🎯</div>
-                    <strong id="goalName">Non défini</strong>
-                    <div class="progress">
-                        <i id="goalBar" style="width: 0%"></i>
-                    </div>
-                    <div class="card-head">
-                        <span id="goalSaved">0 €</span>
-                        <span id="goalTarget">0 €</span>
-                    </div>
-                </article>
-
-                <!-- Recent Transactions -->
-                <article class="card transactions" style="grid-column: span 7">
-                    <div class="card-head">
-                        <h2>Dernières opérations</h2>
-                        <span id="txCount">0</span>
-                    </div>
-                    <div class="list" id="txList"></div>
-                </article>
-
-                <!-- Category Breakdown -->
-                <article class="card breakdown" style="grid-column: span 5">
-                    <div class="card-head">
-                        <h2>Dépenses par catégorie</h2>
-                    </div>
-                    <div class="bars" id="categoryBars"></div>
-                </article>
-            </div>
-        </section>
-
-        <!-- ACCOUNTS SECTION -->
-        <section id="accounts" class="section">
-            <header class="top">
-                <div>
-                    <div class="eyebrow">Gestion</div>
-                    <h1>Mes comptes bancaires</h1>
-                </div>
-                <div class="actions">
-                    <button class="btn primary" id="openAddAccount">＋ Ajouter un compte</button>
-                </div>
-            </header>
-
-            <div class="accounts-grid" id="accountsList">
-                <div class="empty">Aucun compte. Ajoute-en un pour commencer.</div>
-            </div>
-        </section>
-
-        <!-- TRANSACTIONS SECTION -->
-        <section id="transactions" class="section">
-            <header class="top">
-                <div>
-                    <div class="eyebrow">Suivi</div>
-                    <h1>Opérations</h1>
-                </div>
-                <div class="actions">
-                    <button class="btn primary" id="openAddTransaction2">＋ Nouvelle opération</button>
-                </div>
-            </header>
-
-            <div class="filters">
-                <select id="filterMonth">
-                    <option value="">Tous les mois</option>
-                </select>
-                <select id="filterType">
-                    <option value="">Tous les types</option>
-                    <option value="income">Revenus</option>
-                    <option value="expense">Dépenses</option>
-                </select>
-                <input type="text" id="filterSearch" placeholder="Rechercher...">
-            </div>
-
-            <div class="transactions-list" id="transactionsList"></div>
-        </section>
-
-        <!-- INVESTMENTS SECTION -->
-        <section id="investments" class="section">
-            <header class="top">
-                <div>
-                    <div class="eyebrow">Portefeuille</div>
-                    <h1>Mes investissements</h1>
-                </div>
-                <div class="actions">
-                    <button class="btn primary" id="openAddInvestment">＋ Ajouter un investissement</button>
-                </div>
-            </header>
-
-            <div class="investments-grid" id="investmentsList">
-                <div class="empty">Aucun investissement. Commence à en ajouter.</div>
-            </div>
-
-            <div class="card" style="margin-top: 24px; grid-column: span 12">
-                <div class="card-head">
-                    <h2>Allocation du portefeuille</h2>
-                </div>
-                <div class="allocation-chart" id="allocationChart"></div>
-            </div>
-        </section>
-
-        <!-- REPORTS SECTION -->
-        <section id="reports" class="section">
-            <header class="top">
-                <div>
-                    <div class="eyebrow">Analyse</div>
-                    <h1>Rapports et synthèses</h1>
-                </div>
-            </header>
-
-            <div class="reports-container" id="reportsContainer">
-                <div class="card">
-                    <div class="card-head">
-                        <h2>Synthèse mensuelle</h2>
-                    </div>
-                    <div id="monthlySummary" class="summary-content"></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-head">
-                        <h2>Synthèse annuelle</h2>
-                    </div>
-                    <div id="yearlySummary" class="summary-content"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SETTINGS SECTION -->
-        <section id="settings" class="section">
-            <header class="top">
-                <div>
-                    <div class="eyebrow">Configuration</div>
-                    <h1>Paramètres</h1>
-                </div>
-            </header>
-
-            <div class="settings-grid">
-                <div class="card">
-                    <h2>Budget mensuel</h2>
-                    <div class="field">
-                        <label for="settingsBudget">Montant (€)</label>
-                        <input type="number" id="settingsBudget" min="0" step="0.01" value="1500">
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Objectif principal</h2>
-                    <div class="field">
-                        <label for="settingsGoalName">Nom de l'objectif</label>
-                        <input type="text" id="settingsGoalName" placeholder="Ex: Voyage au Sénégal">
-                    </div>
-                    <div class="field">
-                        <label for="settingsGoalAmount">Montant cible (€)</label>
-                        <input type="number" id="settingsGoalAmount" min="0" step="0.01">
-                    </div>
-                    <div class="field">
-                        <label for="settingsGoalIcon">Emoji</label>
-                        <input type="text" id="settingsGoalIcon" maxlength="2" value="🎯">
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Données</h2>
-                    <button class="btn" id="exportData">📥 Exporter (JSON)</button>
-                    <button class="btn" id="resetData" style="margin-top: 10px;">🔄 Réinitialiser tout</button>
-                </div>
-            </div>
-        </section>
-    </main>
+<!-- Écran de connexion -->
+<div id="loginScreen" class="screen" hidden>
+  <div class="login-card">
+    <span class="brand-mark big" aria-hidden="true">€</span>
+    <h1>Mon Pilotage</h1>
+    <p class="muted">Connecte-toi pour retrouver tes comptes et tes opérations sur tous tes appareils.</p>
+    <button class="btn primary wide" id="btnLogin">Se connecter avec Google</button>
+    <p class="login-error" id="loginError" role="alert" hidden></p>
+    <p class="muted small">Tes données ne sont accessibles qu’avec ton compte Google.</p>
+  </div>
 </div>
 
-<!-- MOBILE NAVIGATION -->
-<nav class="mobile-nav">
-    <button class="mobile-nav-btn active" data-section="dashboard"><b>⌂</b><span>Accueil</span></button>
-    <button class="mobile-nav-btn" data-section="accounts"><b>🏦</b><span>Comptes</span></button>
-    <button class="mobile-nav-btn" data-section="transactions"><b>⇄</b><span>Ops</span></button>
-    <button class="mobile-nav-btn" data-section="investments"><b>📈</b><span>Invest</span></button>
-    <button class="mobile-nav-btn" data-section="reports"><b>📊</b><span>Rapports</span></button>
-</nav>
+<!-- Écran de chargement / erreur -->
+<div id="loadingScreen" class="screen">
+  <div class="login-card">
+    <div class="spinner" aria-hidden="true"></div>
+    <p id="loadingMsg">Connexion…</p>
+    <div id="loadingActions" hidden>
+      <button class="btn" data-cmd="logout">Se déconnecter</button>
+    </div>
+  </div>
+</div>
 
-<!-- DIALOGS/MODALS -->
+<!-- Application -->
+<div class="app" id="app" hidden>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">€</span><span>Mon Pilotage</span></div>
+    <nav class="nav" id="sideNav" aria-label="Navigation principale"></nav>
+    <div class="sidebar-foot">
+      <div class="user" id="userInfo"></div>
+      <button class="btn ghost small" data-cmd="privacy">Mode discret</button>
+      <button class="btn ghost small" data-cmd="logout">Se déconnecter</button>
+    </div>
+  </aside>
 
-<!-- Add Account Dialog -->
-<dialog id="addAccountDialog">
-    <form class="modal form" id="accountForm">
-        <h2>Ajouter un compte bancaire</h2>
-        <div class="field">
-            <label for="accountName">Nom du compte</label>
-            <input id="accountName" required placeholder="Ex: BNP Paribas Courant">
-        </div>
-        <div class="field">
-            <label for="accountBank">Banque</label>
-            <input id="accountBank" required placeholder="Ex: BNP Paribas">
-        </div>
-        <div class="field">
-            <label for="accountType">Type</label>
-            <select id="accountType">
-                <option value="checking">Compte courant</option>
-                <option value="savings">Livret d'épargne</option>
-                <option value="lep">LEP</option>
-                <option value="other">Autre</option>
-            </select>
-        </div>
-        <div class="field">
-            <label for="accountBalance">Solde initial (€)</label>
-            <input id="accountBalance" type="number" step="0.01" value="0" required>
-        </div>
-        <div class="form-actions">
-            <button type="button" class="btn" id="cancelAccount">Annuler</button>
-            <button class="btn primary">Enregistrer</button>
-        </div>
-    </form>
+  <main class="main">
+    <section class="section" id="sec-dashboard"></section>
+    <section class="section" id="sec-transactions"></section>
+    <section class="section" id="sec-accounts"></section>
+    <section class="section" id="sec-recurring"></section>
+    <section class="section" id="sec-goals"></section>
+    <section class="section" id="sec-investments"></section>
+    <section class="section" id="sec-reports"></section>
+    <section class="section" id="sec-settings"></section>
+  </main>
+</div>
+
+<nav class="mobile-nav" id="mobileNav" aria-label="Navigation" hidden></nav>
+<button class="fab" id="fab" data-cmd="quickAdd" aria-label="Ajouter une opération" hidden>＋</button>
+
+<!-- Dialogue : opération -->
+<dialog id="dlgTx">
+  <form class="modal form" id="txForm" novalidate>
+    <h2 id="txTitle">Nouvelle opération</h2>
+    <div class="field">
+      <label for="txType">Type</label>
+      <select id="txType">
+        <option value="expense">Dépense</option>
+        <option value="income">Revenu</option>
+        <option value="transfer">Virement entre mes comptes</option>
+      </select>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="txAmount">Montant (€)</label><input id="txAmount" inputmode="decimal" autocomplete="off" placeholder="0,00"></div>
+      <div class="field"><label for="txDate">Date</label><input id="txDate" type="date"></div>
+    </div>
+    <div class="field"><label for="txLabel">Libellé</label><input id="txLabel" maxlength="120" autocomplete="off"></div>
+    <div class="field"><label for="txAccount" id="lblTxAccount">Compte</label><select id="txAccount"></select></div>
+    <div class="field" id="fieldToAccount" hidden><label for="txToAccount">Vers le compte</label><select id="txToAccount"></select></div>
+    <div class="field" id="fieldCategory"><label for="txCategory">Catégorie</label><select id="txCategory"></select></div>
+    <div class="field"><label for="txNote">Note (facultatif)</label><input id="txNote" maxlength="200" autocomplete="off"></div>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close>Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
 </dialog>
 
-<!-- Add Transaction Dialog -->
-<dialog id="addTransactionDialog">
-    <form class="modal form" id="transactionForm">
-        <h2>Nouvelle opération</h2>
-        <div class="field">
-            <label for="txType">Type</label>
-            <select id="txType">
-                <option value="expense">Dépense</option>
-                <option value="income">Revenu</option>
-            </select>
-        </div>
-        <div class="field">
-            <label for="txLabel">Libellé</label>
-            <input id="txLabel" required placeholder="Ex: Courses">
-        </div>
-        <div class="field">
-            <label for="txAmount">Montant (€)</label>
-            <input id="txAmount" type="number" required min="0.01" step="0.01">
-        </div>
-        <div class="field">
-            <label for="txCategory">Catégorie</label>
-            <select id="txCategory">
-                <option>Salaire</option>
-                <option>Bonus</option>
-                <option>Logement</option>
-                <option>Alimentation</option>
-                <option>Transport</option>
-                <option>Loisirs</option>
-                <option>Santé</option>
-                <option>Épargne</option>
-                <option>Autre</option>
-            </select>
-        </div>
-        <div class="field">
-            <label for="txDate">Date</label>
-            <input id="txDate" type="date" required>
-        </div>
-        <div class="form-actions">
-            <button type="button" class="btn" id="cancelTransaction">Annuler</button>
-            <button class="btn primary">Enregistrer</button>
-        </div>
-    </form>
+<!-- Dialogue : compte -->
+<dialog id="dlgAccount">
+  <form class="modal form" id="accountForm" novalidate>
+    <h2 id="accountTitle">Nouveau compte</h2>
+    <div class="field"><label for="accName">Nom du compte</label><input id="accName" maxlength="60" placeholder="Ex. BNP – Compte courant"></div>
+    <div class="row-2">
+      <div class="field"><label for="accBank">Banque</label><input id="accBank" maxlength="40" placeholder="Ex. BNP Paribas"></div>
+      <div class="field"><label for="accType">Type</label><select id="accType"></select></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="accInitial">Solde de départ (€)</label><input id="accInitial" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="accOpening">À la date du</label><input id="accOpening" type="date"></div>
+    </div>
+    <p class="hint">Indique le solde réel du compte à cette date. Les opérations datées de ce jour et après seront ajoutées ou retirées automatiquement. Un solde négatif (découvert) s’écrit avec un signe moins.</p>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close>Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
 </dialog>
 
-<!-- Add Investment Dialog -->
-<dialog id="addInvestmentDialog">
-    <form class="modal form" id="investmentForm">
-        <h2>Ajouter un investissement</h2>
-        <div class="field">
-            <label for="invName">Nom/Ticker</label>
-            <input id="invName" required placeholder="Ex: AAPL, BTC, Immobilier">
-        </div>
-        <div class="field">
-            <label for="invType">Type</label>
-            <select id="invType">
-                <option value="stock">Actions</option>
-                <option value="crypto">Crypto-monnaies</option>
-                <option value="realestate">Immobilier</option>
-                <option value="etf">ETF/Fonds</option>
-                <option value="insurance">Assurance-vie</option>
-                <option value="other">Autre</option>
-            </select>
-        </div>
-        <div class="field">
-            <label for="invAmount">Montant investi (€)</label>
-            <input id="invAmount" type="number" required min="0.01" step="0.01">
-        </div>
-        <div class="field">
-            <label for="invCurrentValue">Valeur actuelle (€)</label>
-            <input id="invCurrentValue" type="number" required min="0" step="0.01">
-        </div>
-        <div class="field">
-            <label for="invDate">Date d'achat</label>
-            <input id="invDate" type="date" required>
-        </div>
-        <div class="form-actions">
-            <button type="button" class="btn" id="cancelInvestment">Annuler</button>
-            <button class="btn primary">Enregistrer</button>
-        </div>
-    </form>
+<!-- Dialogue : correction de solde -->
+<dialog id="dlgReconcile">
+  <form class="modal form" id="reconcileForm" novalidate>
+    <h2>Corriger le solde</h2>
+    <p id="recoInfo"></p>
+    <div class="field"><label for="recoReal">Solde réel affiché par ta banque (€)</label><input id="recoReal" inputmode="decimal" placeholder="0,00"></div>
+    <p class="hint">L’écart est reporté sur le solde de départ. Tes opérations ne sont pas modifiées.</p>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close>Annuler</button>
+      <button type="submit" class="btn primary">Corriger</button>
+    </div>
+  </form>
 </dialog>
 
-<!-- Toast Notification -->
-<div class="toast" id="toast">Opération enregistrée</div>
+<!-- Dialogue : récurrence -->
+<dialog id="dlgRecurring">
+  <form class="modal form" id="recForm" novalidate>
+    <h2 id="recTitle">Nouvelle récurrence</h2>
+    <div class="field">
+      <label for="recType">Type</label>
+      <select id="recType">
+        <option value="expense">Dépense</option>
+        <option value="income">Revenu</option>
+        <option value="transfer">Virement entre mes comptes</option>
+      </select>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="recAmount">Montant (€)</label><input id="recAmount" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="recDay">Jour du mois</label><input id="recDay" type="number" min="1" max="31"></div>
+    </div>
+    <div class="field"><label for="recLabel">Libellé</label><input id="recLabel" maxlength="120" placeholder="Ex. Loyer, Salaire, Navigo"></div>
+    <div class="field"><label for="recAccount">Compte</label><select id="recAccount"></select></div>
+    <div class="field" id="fieldRecTo" hidden><label for="recToAccount">Vers le compte</label><select id="recToAccount"></select></div>
+    <div class="field" id="fieldRecCat"><label for="recCategory">Catégorie</label><select id="recCategory"></select></div>
+    <div class="row-2">
+      <div class="field"><label for="recStart">À partir du</label><input id="recStart" type="date"></div>
+      <div class="field"><label for="recEnd">Jusqu’au (facultatif)</label><input id="recEnd" type="date"></div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close>Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
 
-<!-- Firebase SDK (DOIT être EN PREMIER) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+<!-- Dialogue : objectif -->
+<dialog id="dlgGoal">
+  <form class="modal form" id="goalForm" novalidate>
+    <h2 id="goalTitle">Nouvel objectif</h2>
+    <div class="row-2 icon-row">
+      <div class="field"><label for="goalIcon">Icône</label><input id="goalIcon" maxlength="4"></div>
+      <div class="field"><label for="goalName">Nom</label><input id="goalName" maxlength="60" placeholder="Ex. Fonds d’urgence"></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="goalTarget">Montant cible (€)</label><input id="goalTarget" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="goalDeadline">Échéance (facultatif)</label><input id="goalDeadline" type="date"></div>
+    </div>
+    <div class="field"><label for="goalAccount">Suivre le solde d’un compte</label><select id="goalAccount"></select></div>
+    <div class="field" id="fieldGoalSaved"><label for="goalSaved">Montant déjà épargné (€)</label><input id="goalSaved" inputmode="decimal" placeholder="0,00"></div>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close>Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
 
-<!-- Firebase Initialization -->
-<script src="js/firebase-init.js"></script>
+<!-- Dialogue : investissement -->
+<dialog id="dlgInvestment">
+  <form class="modal form" id="invForm" novalidate>
+    <h2 id="invTitle">Nouvel investissement</h2>
+    <div class="row-2">
+      <div class="field"><label for="invName">Nom</label><input id="invName" maxlength="60" placeholder="Ex. ETF MSCI World"></div>
+      <div class="field"><label for="invType">Type</label><select id="invType"></select></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="invAmount">Montant investi (€)</label><input id="invAmount" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="invValue">Valeur actuelle (€)</label><input id="invValue" inputmode="decimal" placeholder="0,00"></div>
+    </div>
+    <div class="field"><label for="invDate">Date du premier achat</label><input id="invDate" type="date"></div>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close>Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
 
-<!-- Storage (Firebase) -->
-<script src="js/storage.js"></script>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- App Scripts -->
-<script src="js/app.js"></script>
+<!-- Firebase (version "compat" : fonctionne avec des balises script classiques) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+<!-- Application (l'ordre compte : app.js en dernier) -->
+<script src="js/firebase-config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/store.js"></script>
+<script src="js/dashboard.js"></script>
 <script src="js/accounts.js"></script>
 <script src="js/transactions.js"></script>
+<script src="js/recurring.js"></script>
+<script src="js/goals.js"></script>
 <script src="js/investments.js"></script>
 <script src="js/reports.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

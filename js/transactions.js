@@ -1,178 +1,197 @@
 /**
- * Transactions Module
- * Gère les opérations (revenus et dépenses)
+ * Opérations : revenus, dépenses et virements entre comptes.
  */
-
 const Transactions = {
-    render() {
-        const transactions = Storage.getTransactions();
-        const container = document.getElementById('transactionsList');
+  editingId: null,
+  filters: { all: false, type: '', account: '', category: '', q: '' },
 
-        // Populate filters
-        this.populateMonthFilter(transactions);
+  render(el) {
+    const f = this.filters;
+    const cats = [...new Set([...Store.data.settings.categories.expense, ...Store.data.settings.categories.income])];
 
-        // Apply filters
-        const filterMonth = document.getElementById('filterMonth').value;
-        const filterType = document.getElementById('filterType').value;
-        const filterSearch = document.getElementById('filterSearch').value.toLowerCase();
+    el.innerHTML = `
+      ${App.header('Suivi', 'Opérations',
+        `<button class="btn primary" data-act="transactions.openNew">＋ Opération</button>`)}
+      ${f.all ? '' : App.monthNav()}
+      <div class="filters">
+        <input type="search" id="fQ" placeholder="Rechercher un libellé, une note…" value="${U.esc(f.q)}">
+        <select id="fType">
+          <option value="">Tous les types</option>
+          <option value="expense" ${f.type === 'expense' ? 'selected' : ''}>Dépenses</option>
+          <option value="income" ${f.type === 'income' ? 'selected' : ''}>Revenus</option>
+          <option value="transfer" ${f.type === 'transfer' ? 'selected' : ''}>Virements</option>
+        </select>
+        <select id="fAccount"><option value="">Tous les comptes</option>${App.accountOptions(f.account, { all: true })}</select>
+        <select id="fCategory"><option value="">Toutes les catégories</option>${cats.map(c => `<option ${c === f.category ? 'selected' : ''}>${U.esc(c)}</option>`).join('')}</select>
+        <label class="check"><input type="checkbox" id="fAll" ${f.all ? 'checked' : ''}> Toutes les périodes</label>
+      </div>
+      <div class="summary-bar card" id="txSummary"></div>
+      <div class="card"><div class="list" id="txList"></div></div>`;
 
-        let filtered = transactions.filter(t => {
-            const date = new Date(t.date);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const on = (id, ev, fn) => el.querySelector(id).addEventListener(ev, fn);
+    on('#fQ', 'input', e => { f.q = e.target.value; this.renderList(); });
+    on('#fType', 'change', e => { f.type = e.target.value; this.renderList(); });
+    on('#fAccount', 'change', e => { f.account = e.target.value; this.renderList(); });
+    on('#fCategory', 'change', e => { f.category = e.target.value; this.renderList(); });
+    on('#fAll', 'change', e => { f.all = e.target.checked; this.render(el); });
+    this.renderList();
+  },
 
-            const matchMonth = !filterMonth || monthKey === filterMonth;
-            const matchType = !filterType || t.type === filterType;
-            const matchSearch = !filterSearch || 
-                t.label.toLowerCase().includes(filterSearch) || 
-                t.category.toLowerCase().includes(filterSearch);
+  filtered() {
+    const f = this.filters;
+    const q = f.q.trim().toLowerCase();
+    return Store.transactions().filter(t => {
+      if (!f.all && (t.date || '').slice(0, 7) !== App.month) return false;
+      if (f.type && t.type !== f.type) return false;
+      if (f.account && t.accountId !== f.account && t.toAccountId !== f.account) return false;
+      if (f.category && t.category !== f.category) return false;
+      if (q && !`${t.label} ${t.note || ''} ${t.category || ''}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  },
 
-            return matchMonth && matchType && matchSearch;
-        });
+  renderList() {
+    const list = this.filtered();
+    let inc = 0, exp = 0;
+    list.forEach(t => {
+      if (t.type === 'income') inc += Number(t.amount) || 0;
+      if (t.type === 'expense') exp += Number(t.amount) || 0;
+    });
+    const sum = document.getElementById('txSummary');
+    const box = document.getElementById('txList');
+    if (!sum || !box) return;
+    sum.innerHTML = `<span>${list.length} opération${list.length > 1 ? 's' : ''}</span>
+      <span>Entrées ${U.money(inc, 'positive')} · Sorties ${U.money(exp, 'negative')}</span>`;
+    box.innerHTML = list.length ? list.map(t => this.row(t, true)).join('')
+      : '<p class="empty">Aucune opération ne correspond. Ajoute-en une avec le bouton ＋.</p>';
+  },
 
-        // Sort by date descending
-        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        if (filtered.length === 0) {
-            container.innerHTML = '<div class="empty">Aucune opération correspondante.</div>';
-            return;
-        }
-
-        const icons = {
-            'Salaire': '↓',
-            'Bonus': '💰',
-            'Logement': '⌂',
-            'Alimentation': '◉',
-            'Transport': '➜',
-            'Loisirs': '♪',
-            'Santé': '⚕️',
-            'Épargne': '◇',
-            'Autre': '•'
-        };
-
-        container.innerHTML = filtered.map(t => `
-            <div class="transaction-row">
-                <div class="icon">${icons[t.category] || '•'}</div>
-                <div class="info">
-                    <h4>${this.escapeHtml(t.label)}</h4>
-                    <p>${t.category} · ${new Date(t.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}</p>
-                </div>
-                <div class="amount ${t.type === 'income' ? 'positive' : 'negative'}">
-                    ${t.type === 'income' ? '+' : '−'} ${this.formatCurrency(t.amount)}
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn" style="padding: 6px 8px; font-size: 0.8rem;" onclick="Transactions.editTransaction(${t.id})">✏️</button>
-                    <button class="btn" style="padding: 6px 8px; font-size: 0.8rem;" onclick="Transactions.deleteTransaction(${t.id})">🗑️</button>
-                </div>
-            </div>
-        `).join('');
-    },
-
-    populateMonthFilter(transactions) {
-        const filterMonth = document.getElementById('filterMonth');
-        const months = new Set();
-
-        transactions.forEach(t => {
-            const date = new Date(t.date);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            months.add(monthKey);
-        });
-
-        const currentOptions = Array.from(filterMonth.querySelectorAll('option')).slice(1);
-        const currentKeys = new Set(currentOptions.map(o => o.value));
-
-        months.forEach(monthKey => {
-            if (!currentKeys.has(monthKey)) {
-                const [year, month] = monthKey.split('-');
-                const date = new Date(year, parseInt(month) - 1);
-                const label = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-                const option = document.createElement('option');
-                option.value = monthKey;
-                option.textContent = label.charAt(0).toUpperCase() + label.slice(1);
-                filterMonth.appendChild(option);
-            }
-        });
-    },
-
-    handleAddTransaction() {
-        const type = document.getElementById('txType').value;
-        const label = document.getElementById('txLabel').value.trim();
-        const amount = parseFloat(document.getElementById('txAmount').value);
-        const category = document.getElementById('txCategory').value;
-        const date = document.getElementById('txDate').value;
-
-        if (!label || isNaN(amount) || amount <= 0 || !date) {
-            App.showToast('Remplis tous les champs correctement');
-            return;
-        }
-
-        const transaction = {
-            type,
-            label,
-            amount,
-            category,
-            date
-        };
-
-        Storage.addTransaction(transaction);
-        document.getElementById('addTransactionDialog').close();
-        document.getElementById('transactionForm').reset();
-        App.showToast('Opération enregistrée');
-        this.render();
-        App.renderDashboard();
-
-        // Setup filters on first add
-        this.setupFilters();
-    },
-
-    editTransaction(id) {
-        const tx = Storage.getTransactions().find(t => t.id === id);
-        if (!tx) return;
-
-        const newAmount = prompt(`Nouveau montant pour "${tx.label}" (€):`, tx.amount);
-        if (newAmount !== null && !isNaN(newAmount) && parseFloat(newAmount) > 0) {
-            Storage.updateTransaction(id, { amount: parseFloat(newAmount) });
-            App.showToast('Opération mise à jour');
-            this.render();
-            App.renderDashboard();
-        }
-    },
-
-    deleteTransaction(id) {
-        const tx = Storage.getTransactions().find(t => t.id === id);
-        if (tx && confirm(`Supprimer "${tx.label}" ?`)) {
-            Storage.deleteTransaction(id);
-            App.showToast('Opération supprimée');
-            this.render();
-            App.renderDashboard();
-        }
-    },
-
-    setupFilters() {
-        const filterMonth = document.getElementById('filterMonth');
-        const filterType = document.getElementById('filterType');
-        const filterSearch = document.getElementById('filterSearch');
-
-        filterMonth.addEventListener('change', () => this.render());
-        filterType.addEventListener('change', () => this.render());
-        filterSearch.addEventListener('input', () => this.render());
-    },
-
-    formatCurrency(amount) {
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR',
-            maximumFractionDigits: 2
-        }).format(amount);
-    },
-
-    escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+  row(t, actions) {
+    const acc = Store.get('accounts', t.accountId);
+    const to = Store.get('accounts', t.toAccountId);
+    let icon, cls, sign, sub;
+    if (t.type === 'transfer') {
+      icon = '⇆'; cls = 'transfer'; sign = '';
+      sub = `${acc ? acc.name : '?'} → ${to ? to.name : '?'}`;
+    } else {
+      icon = U.catIcon(t.category);
+      cls = t.type === 'income' ? 'positive' : 'negative';
+      sign = t.type === 'income' ? '+ ' : '− ';
+      sub = `${t.category || 'Sans catégorie'}${acc ? ' – ' + acc.name : ''}`;
     }
-};
+    return `
+      <div class="tx">
+        <span class="ico">${icon}</span>
+        <div class="tx-main">
+          <strong>${U.esc(t.label)}${t.recurringId ? ' <span class="tag" title="Opération récurrente">↻</span>' : ''}</strong>
+          <small>${U.esc(sub)} – ${U.shortDate(t.date)}</small>
+          ${t.note ? `<small class="note">${U.esc(t.note)}</small>` : ''}
+        </div>
+        <b class="${cls}">${sign}${U.money(t.amount)}</b>
+        ${actions ? `<div class="row-actions">
+          <button class="icon-btn" data-act="transactions.edit" data-id="${U.esc(t.id)}" aria-label="Modifier">✏️</button>
+          <button class="icon-btn" data-act="transactions.del" data-id="${U.esc(t.id)}" aria-label="Supprimer">🗑️</button>
+        </div>` : ''}
+      </div>`;
+  },
 
-// Setup filters on init
-document.addEventListener('DOMContentLoaded', () => {
-    Transactions.setupFilters();
-});
+  /* ---------- Formulaire ---------- */
+
+  bindForm() {
+    document.getElementById('txType').addEventListener('change', () => this.updateTypeUI());
+    document.getElementById('txForm').addEventListener('submit', e => { e.preventDefault(); this.submit(); });
+  },
+
+  lastAccount() {
+    try { return localStorage.getItem('pilotage-last-account') || ''; } catch (e) { return ''; }
+  },
+
+  openNew() {
+    if (!Store.activeAccounts().length && !confirm("Tu n'as pas encore de compte. Enregistrer l'opération sans compte ?")) {
+      return Accounts.openNew();
+    }
+    this.editingId = null;
+    const last = this.lastAccount();
+    this.fill({
+      type: 'expense', label: '', amount: '', date: U.today(),
+      accountId: Store.get('accounts', last) ? last : '', toAccountId: '', category: '', note: ''
+    });
+    document.getElementById('txTitle').textContent = 'Nouvelle opération';
+    App.openDialog('dlgTx');
+    setTimeout(() => document.getElementById('txAmount').focus(), 60);
+  },
+
+  edit(id) {
+    const t = Store.get('transactions', id);
+    if (!t) return;
+    this.editingId = id;
+    this.fill(t);
+    document.getElementById('txTitle').textContent = 'Modifier l’opération';
+    App.openDialog('dlgTx');
+  },
+
+  fill(t) {
+    document.getElementById('txType').value = t.type || 'expense';
+    document.getElementById('txLabel').value = t.label || '';
+    document.getElementById('txAmount').value = t.amount !== '' && t.amount !== undefined ? String(t.amount).replace('.', ',') : '';
+    document.getElementById('txDate').value = t.date || U.today();
+    document.getElementById('txAccount').innerHTML = App.accountOptions(t.accountId || '', { none: 'Aucun compte' });
+    document.getElementById('txToAccount').innerHTML = App.accountOptions(t.toAccountId || '', { none: 'Choisir…' });
+    document.getElementById('txNote').value = t.note || '';
+    this.updateTypeUI(t.category);
+  },
+
+  updateTypeUI(selectedCat) {
+    const type = document.getElementById('txType').value;
+    const isTransfer = type === 'transfer';
+    document.getElementById('fieldToAccount').hidden = !isTransfer;
+    document.getElementById('fieldCategory').hidden = isTransfer;
+    document.getElementById('lblTxAccount').textContent = isTransfer ? 'Depuis le compte' : 'Compte';
+    document.getElementById('txLabel').placeholder = isTransfer ? 'Ex. Épargne mensuelle' : 'Ex. Courses Carrefour';
+    if (!isTransfer) {
+      const cur = selectedCat !== undefined ? selectedCat : document.getElementById('txCategory').value;
+      document.getElementById('txCategory').innerHTML = App.categoryOptions(type, cur);
+    }
+  },
+
+  submit() {
+    const type = document.getElementById('txType').value;
+    const amount = U.num(document.getElementById('txAmount').value);
+    const date = document.getElementById('txDate').value;
+    const accountId = document.getElementById('txAccount').value || null;
+    const toAccountId = document.getElementById('txToAccount').value || null;
+    const category = document.getElementById('txCategory').value;
+    const note = document.getElementById('txNote').value.trim();
+    let label = document.getElementById('txLabel').value.trim();
+
+    if (!(amount > 0)) return App.toast('Indique un montant supérieur à 0', 'error');
+    if (!date) return App.toast('Choisis une date', 'error');
+    if (type === 'transfer') {
+      if (!accountId || !toAccountId) return App.toast('Choisis le compte de départ et le compte d’arrivée', 'error');
+      if (accountId === toAccountId) return App.toast('Les deux comptes doivent être différents', 'error');
+      if (!label) label = 'Virement';
+    } else if (!label) {
+      return App.toast('Ajoute un libellé', 'error');
+    }
+
+    const base = this.editingId ? { ...Store.get('transactions', this.editingId) } : {};
+    const obj = {
+      ...base, type, label, amount: U.round2(amount), date, accountId,
+      toAccountId: type === 'transfer' ? toAccountId : null,
+      category: type === 'transfer' ? null : category,
+      note: note || null
+    };
+
+    try { if (accountId) localStorage.setItem('pilotage-last-account', accountId); } catch (e) { /* ignoré */ }
+    App.closeDialog('dlgTx');
+    Store.save('transactions', obj).catch(e => App.fail(e));
+    App.toast(this.editingId ? 'Opération modifiée' : 'Opération enregistrée');
+  },
+
+  del(id) {
+    const t = Store.get('transactions', id);
+    if (!t || !confirm(`Supprimer « ${t.label} » (${U.eur(t.amount)}) ?`)) return;
+    Store.deleteTransaction(id).catch(e => App.fail(e));
+    App.toast('Opération supprimée');
+  }
+};
