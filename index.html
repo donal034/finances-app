@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Pilotage Financier</title>
+    <meta name="description" content="Suivi personnalisé de vos finances, investissements et objectifs d'épargne.">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b1220'/%3E%3Cpath d='M18 39c8 8 20 8 28 0M18 25c8-8 20-8 28 0' stroke='%236ee7b7' stroke-width='6' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="app">
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+        <div class="brand">
+            <span class="brand-mark">€</span>
+            <span>Mon Pilotage</span>
+        </div>
+        <nav class="nav">
+            <button class="nav-btn active" data-section="dashboard">
+                <span class="icon">⌂</span>
+                <span>Tableau de bord</span>
+            </button>
+            <button class="nav-btn" data-section="accounts">
+                <span class="icon">🏦</span>
+                <span>Comptes</span>
+            </button>
+            <button class="nav-btn" data-section="transactions">
+                <span class="icon">⇄</span>
+                <span>Opérations</span>
+            </button>
+            <button class="nav-btn" data-section="investments">
+                <span class="icon">📈</span>
+                <span>Investissements</span>
+            </button>
+            <button class="nav-btn" data-section="reports">
+                <span class="icon">📊</span>
+                <span>Rapports</span>
+            </button>
+            <button class="nav-btn" data-section="settings">
+                <span class="icon">⚙️</span>
+                <span>Paramètres</span>
+            </button>
+        </nav>
+        <div class="privacy">
+            🔒 Vos données restent enregistrées uniquement sur cet appareil.
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+        <!-- DASHBOARD SECTION -->
+        <section id="dashboard" class="section active">
+            <header class="top">
+                <div>
+                    <div class="eyebrow">Bienvenue</div>
+                    <h1>Vos finances, en un coup d'œil</h1>
+                </div>
+                <div class="actions">
+                    <button class="btn" id="openAddTransaction">＋ Ajouter une opération</button>
+                </div>
+            </header>
+
+            <div class="grid">
+                <!-- Total Assets Card -->
+                <article class="card balance" style="grid-column: span 4">
+                    <div class="card-head">
+                        <h2>Patrimoine total</h2>
+                    </div>
+                    <div class="amount" id="totalAssets">0 €</div>
+                    <div class="trend" id="assetsTrend">● À jour</div>
+                </article>
+
+                <!-- Monthly Income Card -->
+                <article class="card" style="grid-column: span 4">
+                    <div class="card-head">
+                        <h2>Revenus (ce mois)</h2>
+                    </div>
+                    <div class="amount" id="monthlyIncome" style="color: var(--mint); font-size: 2rem;">0 €</div>
+                </article>
+
+                <!-- Monthly Expenses Card -->
+                <article class="card" style="grid-column: span 4">
+                    <div class="card-head">
+                        <h2>Dépenses (ce mois)</h2>
+                    </div>
+                    <div class="amount" id="monthlyExpenses" style="color: var(--red); font-size: 2rem;">0 €</div>
+                </article>
+
+                <!-- Budget Tracking -->
+                <article class="card budget" style="grid-column: span 5">
+                    <div class="card-head">
+                        <h2>Budget mensuel</h2>
+                        <span id="budgetText">0 € / 1 500 €</span>
+                    </div>
+                    <div class="donut-wrap">
+                        <div class="donut" id="donut">
+                            <strong id="budgetPct">0%</strong>
+                        </div>
+                        <div class="legend">
+                            <span><i class="dot" style="background:var(--mint)"></i>Dépensé</span>
+                            <span><i class="dot" style="background:#26364d"></i>Disponible</span>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Savings Goal -->
+                <article class="card objective" style="grid-column: span 3">
+                    <div class="card-head">
+                        <h2>Objectif principal</h2>
+                    </div>
+                    <div class="goal-icon" id="goalIcon">🎯</div>
+                    <strong id="goalName">Non défini</strong>
+                    <div class="progress">
+                        <i id="goalBar" style="width: 0%"></i>
+                    </div>
+                    <div class="card-head">
+                        <span id="goalSaved">0 €</span>
+                        <span id="goalTarget">0 €</span>
+                    </div>
+                </article>
+
+                <!-- Recent Transactions -->
+                <article class="card transactions" style="grid-column: span 7">
+                    <div class="card-head">
+                        <h2>Dernières opérations</h2>
+                        <span id="txCount">0</span>
+                    </div>
+                    <div class="list" id="txList"></div>
+                </article>
+
+                <!-- Category Breakdown -->
+                <article class="card breakdown" style="grid-column: span 5">
+                    <div class="card-head">
+                        <h2>Dépenses par catégorie</h2>
+                    </div>
+                    <div class="bars" id="categoryBars"></div>
+                </article>
+            </div>
+        </section>
+
+        <!-- ACCOUNTS SECTION -->
+        <section id="accounts" class="section">
+            <header class="top">
+                <div>
+                    <div class="eyebrow">Gestion</div>
+                    <h1>Mes comptes bancaires</h1>
+                </div>
+                <div class="actions">
+                    <button class="btn primary" id="openAddAccount">＋ Ajouter un compte</button>
+                </div>
+            </header>
+
+            <div class="accounts-grid" id="accountsList">
+                <div class="empty">Aucun compte. Ajoute-en un pour commencer.</div>
+            </div>
+        </section>
+
+        <!-- TRANSACTIONS SECTION -->
+        <section id="transactions" class="section">
+            <header class="top">
+                <div>
+                    <div class="eyebrow">Suivi</div>
+                    <h1>Opérations</h1>
+                </div>
+                <div class="actions">
+                    <button class="btn primary" id="openAddTransaction2">＋ Nouvelle opération</button>
+                </div>
+            </header>
+
+            <div class="filters">
+                <select id="filterMonth">
+                    <option value="">Tous les mois</option>
+                </select>
+                <select id="filterType">
+                    <option value="">Tous les types</option>
+                    <option value="income">Revenus</option>
+                    <option value="expense">Dépenses</option>
+                </select>
+                <input type="text" id="filterSearch" placeholder="Rechercher...">
+            </div>
+
+            <div class="transactions-list" id="transactionsList"></div>
+        </section>
+
+        <!-- INVESTMENTS SECTION -->
+        <section id="investments" class="section">
+            <header class="top">
+                <div>
+                    <div class="eyebrow">Portefeuille</div>
+                    <h1>Mes investissements</h1>
+                </div>
+                <div class="actions">
+                    <button class="btn primary" id="openAddInvestment">＋ Ajouter un investissement</button>
+                </div>
+            </header>
+
+            <div class="investments-grid" id="investmentsList">
+                <div class="empty">Aucun investissement. Commence à en ajouter.</div>
+            </div>
+
+            <div class="card" style="margin-top: 24px; grid-column: span 12">
+                <div class="card-head">
+                    <h2>Allocation du portefeuille</h2>
+                </div>
+                <div class="allocation-chart" id="allocationChart"></div>
+            </div>
+        </section>
+
+        <!-- REPORTS SECTION -->
+        <section id="reports" class="section">
+            <header class="top">
+                <div>
+                    <div class="eyebrow">Analyse</div>
+                    <h1>Rapports et synthèses</h1>
+                </div>
+            </header>
+
+            <div class="reports-container" id="reportsContainer">
+                <div class="card">
+                    <div class="card-head">
+                        <h2>Synthèse mensuelle</h2>
+                    </div>
+                    <div id="monthlySummary" class="summary-content"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-head">
+                        <h2>Synthèse annuelle</h2>
+                    </div>
+                    <div id="yearlySummary" class="summary-content"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SETTINGS SECTION -->
+        <section id="settings" class="section">
+            <header class="top">
+                <div>
+                    <div class="eyebrow">Configuration</div>
+                    <h1>Paramètres</h1>
+                </div>
+            </header>
+
+            <div class="settings-grid">
+                <div class="card">
+                    <h2>Budget mensuel</h2>
+                    <div class="field">
+                        <label for="settingsBudget">Montant (€)</label>
+                        <input type="number" id="settingsBudget" min="0" step="0.01" value="1500">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Objectif principal</h2>
+                    <div class="field">
+                        <label for="settingsGoalName">Nom de l'objectif</label>
+                        <input type="text" id="settingsGoalName" placeholder="Ex: Voyage au Sénégal">
+                    </div>
+                    <div class="field">
+                        <label for="settingsGoalAmount">Montant cible (€)</label>
+                        <input type="number" id="settingsGoalAmount" min="0" step="0.01">
+                    </div>
+                    <div class="field">
+                        <label for="settingsGoalIcon">Emoji</label>
+                        <input type="text" id="settingsGoalIcon" maxlength="2" value="🎯">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Données</h2>
+                    <button class="btn" id="exportData">📥 Exporter (JSON)</button>
+                    <button class="btn" id="resetData" style="margin-top: 10px;">🔄 Réinitialiser tout</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- MOBILE NAVIGATION -->
+<nav class="mobile-nav">
+    <button class="mobile-nav-btn active" data-section="dashboard"><b>⌂</b><span>Accueil</span></button>
+    <button class="mobile-nav-btn" data-section="accounts"><b>🏦</b><span>Comptes</span></button>
+    <button class="mobile-nav-btn" data-section="transactions"><b>⇄</b><span>Ops</span></button>
+    <button class="mobile-nav-btn" data-section="investments"><b>📈</b><span>Invest</span></button>
+    <button class="mobile-nav-btn" data-section="reports"><b>📊</b><span>Rapports</span></button>
+</nav>
+
+<!-- DIALOGS/MODALS -->
+
+<!-- Add Account Dialog -->
+<dialog id="addAccountDialog">
+    <form class="modal form" id="accountForm">
+        <h2>Ajouter un compte bancaire</h2>
+        <div class="field">
+            <label for="accountName">Nom du compte</label>
+            <input id="accountName" required placeholder="Ex: BNP Paribas Courant">
+        </div>
+        <div class="field">
+            <label for="accountBank">Banque</label>
+            <input id="accountBank" required placeholder="Ex: BNP Paribas">
+        </div>
+        <div class="field">
+            <label for="accountType">Type</label>
+            <select id="accountType">
+                <option value="checking">Compte courant</option>
+                <option value="savings">Livret d'épargne</option>
+                <option value="lep">LEP</option>
+                <option value="other">Autre</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="accountBalance">Solde initial (€)</label>
+            <input id="accountBalance" type="number" step="0.01" value="0" required>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn" id="cancelAccount">Annuler</button>
+            <button class="btn primary">Enregistrer</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Add Transaction Dialog -->
+<dialog id="addTransactionDialog">
+    <form class="modal form" id="transactionForm">
+        <h2>Nouvelle opération</h2>
+        <div class="field">
+            <label for="txType">Type</label>
+            <select id="txType">
+                <option value="expense">Dépense</option>
+                <option value="income">Revenu</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="txLabel">Libellé</label>
+            <input id="txLabel" required placeholder="Ex: Courses">
+        </div>
+        <div class="field">
+            <label for="txAmount">Montant (€)</label>
+            <input id="txAmount" type="number" required min="0.01" step="0.01">
+        </div>
+        <div class="field">
+            <label for="txCategory">Catégorie</label>
+            <select id="txCategory">
+                <option>Salaire</option>
+                <option>Bonus</option>
+                <option>Logement</option>
+                <option>Alimentation</option>
+                <option>Transport</option>
+                <option>Loisirs</option>
+                <option>Santé</option>
+                <option>Épargne</option>
+                <option>Autre</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="txDate">Date</label>
+            <input id="txDate" type="date" required>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn" id="cancelTransaction">Annuler</button>
+            <button class="btn primary">Enregistrer</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Add Investment Dialog -->
+<dialog id="addInvestmentDialog">
+    <form class="modal form" id="investmentForm">
+        <h2>Ajouter un investissement</h2>
+        <div class="field">
+            <label for="invName">Nom/Ticker</label>
+            <input id="invName" required placeholder="Ex: AAPL, BTC, Immobilier">
+        </div>
+        <div class="field">
+            <label for="invType">Type</label>
+            <select id="invType">
+                <option value="stock">Actions</option>
+                <option value="crypto">Crypto-monnaies</option>
+                <option value="realestate">Immobilier</option>
+                <option value="etf">ETF/Fonds</option>
+                <option value="insurance">Assurance-vie</option>
+                <option value="other">Autre</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="invAmount">Montant investi (€)</label>
+            <input id="invAmount" type="number" required min="0.01" step="0.01">
+        </div>
+        <div class="field">
+            <label for="invCurrentValue">Valeur actuelle (€)</label>
+            <input id="invCurrentValue" type="number" required min="0" step="0.01">
+        </div>
+        <div class="field">
+            <label for="invDate">Date d'achat</label>
+            <input id="invDate" type="date" required>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn" id="cancelInvestment">Annuler</button>
+            <button class="btn primary">Enregistrer</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast">Opération enregistrée</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+
+<!-- Scripts -->
+<script src="js/firebase-init.js"></script>
+<script src="js/storage-firebase.js"></script>
+<script src="js/app.js"></script>
+<script src="js/accounts.js"></script>
+<script src="js/transactions.js"></script>
+<script src="js/investments.js"></script>
+<script src="js/reports.js"></script>
+</body>
+</html>
