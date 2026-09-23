@@ -10,7 +10,57 @@ const Debts = {
   editingId: null,
   paymentDebtId: null,
 
+  tab: 'debts',
+
+  setTab(k) {
+    this.tab = k;
+    if (App.section === 'debts') App.render(); else App.go('debts');
+  },
+
   render(el) {
+    const third = Store.thirdPartyTotals();
+    el.innerHTML = `
+      ${App.header('Engagements', 'Dettes et prêts',
+        `<button class="btn primary" data-act="debts.openNew">＋ Ajouter</button>`)}
+      <div class="tabs" role="tablist">
+        <button role="tab" class="tab ${this.tab === 'debts' ? 'active' : ''}" aria-selected="${this.tab === 'debts'}" data-act="debts.setTab" data-id="debts">Dettes et prêts</button>
+        <button role="tab" class="tab ${this.tab === 'third' ? 'active' : ''}" aria-selected="${this.tab === 'third'}" data-act="debts.setTab" data-id="third">Argent pour autrui (${third.length})</button>
+      </div>
+      <div id="debtContent"></div>`;
+    const box = el.querySelector('#debtContent');
+    box.innerHTML = this.tab === 'third' ? this.renderThird(third) : this.renderDebts();
+  },
+
+  renderThird(third) {
+    const held = U.round2(third.reduce((s, t) => s + Math.max(0, t.held), 0));
+    const advanced = U.round2(third.reduce((s, t) => s + Math.max(0, -t.held), 0));
+    if (!third.length) {
+      return `<div class="card onboarding"><h2>Aucun flux pour autrui</h2>
+        <p class="muted">Quand tu encaisses des cotisations ou que tu reçois de l'argent à reverser, coche « Pour le compte d'un tiers » dans l'opération. Ces montants ne comptent alors ni dans tes revenus ni dans tes dépenses, mais restent visibles sur le solde du compte.</p></div>`;
+    }
+    return `
+      <div class="grid">
+        <article class="card kpi span-4"><span class="kpi-label">Argent détenu</span>
+          <div class="kpi-value">${U.money(held)}</div>
+          <span class="muted small">Sur tes comptes, mais à reverser</span></article>
+        <article class="card kpi span-4"><span class="kpi-label">Avancé de ta poche</span>
+          <div class="kpi-value negative">${U.money(advanced)}</div>
+          <span class="muted small">Reversé avant d'avoir été encaissé</span></article>
+        <article class="card kpi span-4"><span class="kpi-label">Personnes suivies</span>
+          <div class="kpi-value">${third.length}</div></article>
+      </div>
+      <div class="card"><div class="list">${third.map(t => `
+        <div class="tx">
+          <span class="ico">👥</span>
+          <div class="tx-main"><strong>${U.esc(t.person)}</strong>
+            <small>Reçu ${U.eur(t.in)} – reversé ${U.eur(t.out)} – ${t.count} opération${t.count > 1 ? 's' : ''}</small>
+            <small class="note">Dernière : ${U.longDate(t.last)}</small></div>
+          <b class="${t.held > 0 ? 'third' : t.held < 0 ? 'negative' : 'muted'}">${t.held === 0 ? 'Soldé' : U.money(t.held)}</b>
+        </div>`).join('')}</div></div>
+      <p class="hint">Un solde positif signifie que tu détiens encore de l'argent qui ne t'appartient pas. Un solde négatif signifie que tu as avancé de ta poche.</p>`;
+  },
+
+  renderDebts() {
     const list = Store.list('debts').sort((a, b) => {
       const ra = Store.debtRemaining(a), rb = Store.debtRemaining(b);
       if ((ra > 0) !== (rb > 0)) return ra > 0 ? -1 : 1;
@@ -18,9 +68,7 @@ const Debts = {
     });
     const t = Store.debtTotals();
 
-    el.innerHTML = `
-      ${App.header('Engagements', 'Dettes et prêts',
-        `<button class="btn primary" data-act="debts.openNew">＋ Ajouter</button>`)}
+    return `
       <div class="grid">
         <article class="card kpi span-4"><span class="kpi-label">Je dois</span>
           <div class="kpi-value negative">${U.money(t.owe)}</div></article>

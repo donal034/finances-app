@@ -24,6 +24,17 @@ const Settings = {
           <button class="btn primary" id="saveCats">Enregistrer les catégories</button>
         </div>
 
+        <div class="card rules-card">
+          <h2>Règles de catégorisation</h2>
+          <p class="muted small">Si le libellé d'une opération contient le texte indiqué, la catégorie est proposée automatiquement. Exemple : « NAVIGO » vers Transport.</p>
+          <div id="rulesList"></div>
+          <div class="stack">
+            <button class="btn" id="addRule">＋ Ajouter une règle</button>
+            <button class="btn primary" id="saveRules">Enregistrer les règles</button>
+            <button class="btn" id="applyRules">Appliquer aux opérations sans catégorie</button>
+          </div>
+        </div>
+
         <div class="card">
           <h2>Sauvegarde</h2>
           <p class="muted small">Télécharge une copie complète de tes données, ou restaure une sauvegarde.</p>
@@ -47,10 +58,56 @@ const Settings = {
       </div>`;
 
     el.querySelector('#saveCats').addEventListener('click', () => this.saveCategories());
+    this.renderRules(el);
+    el.querySelector('#addRule').addEventListener('click', () => this.addRuleRow(el));
+    el.querySelector('#saveRules').addEventListener('click', () => this.saveRules(el));
+    el.querySelector('#applyRules').addEventListener('click', () => {
+      const n = Store.applyRules(true);
+      App.toast(n ? `${n} opération${n > 1 ? 's' : ''} recatégorisée${n > 1 ? 's' : ''}` : 'Aucune opération à recatégoriser');
+    });
     el.querySelector('#exportJson').addEventListener('click', () => this.exportJson());
     el.querySelector('#exportCsv').addEventListener('click', () => this.exportCsv());
     el.querySelector('#importJson').addEventListener('change', e => this.importJson(e.target));
     el.querySelector('#wipeAll').addEventListener('click', () => this.wipe());
+  },
+
+  ruleRow(rule) {
+    const cats = [...Store.data.settings.categories.expense, ...Store.data.settings.categories.income];
+    if (rule.c && !cats.includes(rule.c)) cats.push(rule.c);
+    return `<div class="rule-row">
+      <input class="rule-match" value="${U.esc(rule.m || '')}" placeholder="Texte du libellé (ex. NAVIGO)">
+      <select class="rule-cat">${cats.map(c => `<option value="${U.esc(c)}" ${c === rule.c ? 'selected' : ''}>${U.esc(c)}</option>`).join('')}</select>
+      <button class="icon-btn rule-del" aria-label="Supprimer la règle">🗑️</button>
+    </div>`;
+  },
+
+  renderRules(el) {
+    const box = el.querySelector('#rulesList');
+    const rules = Store.data.settings.rules;
+    box.innerHTML = rules.length ? rules.map(r => this.ruleRow(r)).join('')
+      : '<p class="empty">Aucune règle.</p>';
+    box.querySelectorAll('.rule-del').forEach(b =>
+      b.addEventListener('click', () => { b.closest('.rule-row').remove(); }));
+  },
+
+  addRuleRow(el) {
+    const box = el.querySelector('#rulesList');
+    if (!box.querySelector('.rule-row')) box.innerHTML = '';
+    box.insertAdjacentHTML('beforeend', this.ruleRow({ m: '', c: Store.data.settings.categories.expense[0] }));
+    const row = box.lastElementChild;
+    row.querySelector('.rule-del').addEventListener('click', () => row.remove());
+    row.querySelector('.rule-match').focus();
+  },
+
+  saveRules(el) {
+    const rules = [];
+    for (const row of el.querySelectorAll('.rule-row')) {
+      const m = row.querySelector('.rule-match').value.trim();
+      const c = row.querySelector('.rule-cat').value;
+      if (m && c) rules.push({ m, c });
+    }
+    Store.saveSettings({ ...Store.data.settings, rules }).catch(e => App.fail(e));
+    App.toast('Règles enregistrées');
   },
 
   parseList(id) {

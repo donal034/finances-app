@@ -37,6 +37,7 @@ const Recurring = {
 
   renderUpcoming() {
     const p = Store.projection(45);
+    const pending = Store.pendingVariable();
     if (!Store.list('recurrings').length && !Store.list('debts').length) {
       return `<div class="card onboarding"><h2>Rien de prévu</h2>
         <p class="muted">Ajoute ton salaire, ton loyer et tes abonnements : l'échéancier affichera ce qui arrive et le solde prévu de tes comptes courants.</p>
@@ -55,6 +56,19 @@ const Recurring = {
         <article class="card kpi span-4"><span class="kpi-label">Dans 45 jours</span>
           <div class="kpi-value ${(p.events.length ? p.events[p.events.length - 1].balance : p.start) < 0 ? 'negative' : ''}">${U.money(p.events.length ? p.events[p.events.length - 1].balance : p.start)}</div></article>
       </div>
+      ${pending.length ? `<div class="card pending">
+        <div class="card-head"><h2>À confirmer</h2><span class="muted small">Montant variable : saisis le montant réel</span></div>
+        <div class="list">${pending.map(e => `
+          <div class="tx">
+            <span class="ico">?</span>
+            <div class="tx-main"><strong>${U.esc(e.item.label)}</strong>
+              <small>Prévu le ${U.longDate(e.date)} – dernier montant ${U.eur(e.item.amount)}</small></div>
+            <div class="row-actions">
+              <button class="btn small primary" data-act="transactions.confirmRecurring" data-id="${U.esc(e.item.id + '|' + e.monthKey)}">Saisir</button>
+              <button class="btn small" data-act="recurring.skip" data-id="${U.esc(e.item.id + '|' + e.monthKey)}">Ignorer</button>
+            </div>
+          </div>`).join('')}</div>
+      </div>` : ''}
       ${!p.hasCurrent ? '<div class="alert">⚠ Aucun compte de type « Compte courant », « Portefeuille en ligne » ou « Espèces » : le solde prévu ne peut pas être calculé.</div>' : ''}
       <div class="card">
         ${p.events.length ? Object.entries(byDate).map(([date, evs]) => `
@@ -80,8 +94,8 @@ const Recurring = {
     const sign = r.type === 'income' ? '+ ' : r.type === 'expense' ? '− ' : '';
     return `<div class="tx"><span class="ico">${r.type === 'transfer' ? '⇆' : U.catIcon(r.category)}</span>
       <div class="tx-main"><strong>${U.esc(r.label)}${r.kind === 'subscription' ? ' <span class="tag">Abonnement</span>' : ''}</strong>
-        <small>${U.esc(this.where(r))}</small></div>
-      <b class="${cls}">${sign}${U.money(r.amount)}</b></div>`;
+        <small>${U.esc(this.where(r))}${r.variable ? ' – montant variable' : ''}</small></div>
+      <b class="${cls}">${sign}${U.money(r.amount)}${r.variable ? ' ?' : ''}</b></div>`;
   },
 
   renderAll(list) {
@@ -142,7 +156,7 @@ const Recurring = {
         <span class="ico">${r.type === 'transfer' ? '⇆' : U.catIcon(r.category)}</span>
         <div class="tx-main">
           <strong>${U.esc(r.label)}${r.kind === 'subscription' ? ' <span class="tag">Abonnement</span>' : ''}</strong>
-          <small>${U.esc(this.where(r))} – le ${Number(r.day)} de chaque mois</small>
+          <small>${U.esc(this.where(r))} – le ${Number(r.day)} de chaque mois${r.variable ? ' – montant variable' : ''}</small>
           <small class="note">${this.statusText(r)}</small>
         </div>
         <b class="${cls}">${sign}${U.money(r.amount)}</b>
@@ -164,7 +178,7 @@ const Recurring = {
 
   openNew(presetSub) {
     this.editingId = null;
-    this.fill({ type: 'expense', label: '', amount: '', day: new Date().getDate(), startDate: U.today(), active: true,
+    this.fill({ type: 'expense', label: '', amount: '', day: new Date().getDate(), startDate: U.today(), active: true, variable: false,
       kind: presetSub === true ? 'subscription' : 'standard', category: presetSub === true ? 'Abonnements' : undefined });
     document.getElementById('recTitle').textContent = presetSub === true ? 'Nouvel abonnement' : 'Nouvelle récurrence';
     App.openDialog('dlgRecurring');
@@ -191,6 +205,7 @@ const Recurring = {
     document.getElementById('recStart').value = r.startDate || U.today();
     document.getElementById('recEnd').value = r.endDate || '';
     document.getElementById('recSub').checked = r.kind === 'subscription';
+    document.getElementById('recVariable').checked = !!r.variable;
     document.getElementById('recAccount').innerHTML = App.accountOptions(r.accountId || '', { none: 'Aucun compte' });
     document.getElementById('recToAccount').innerHTML = App.accountOptions(r.toAccountId || '', { none: 'Choisir…' });
     this.updateTypeUI(r.category);
@@ -217,6 +232,7 @@ const Recurring = {
     const accountId = document.getElementById('recAccount').value || null;
     const toAccountId = document.getElementById('recToAccount').value || null;
     const kind = type === 'expense' && document.getElementById('recSub').checked ? 'subscription' : 'standard';
+    const variable = document.getElementById('recVariable').checked;
     let label = document.getElementById('recLabel').value.trim();
 
     if (!(amount > 0)) return App.toast('Indique un montant supérieur à 0', 'error');
@@ -233,12 +249,19 @@ const Recurring = {
     const base = this.editingId ? { ...Store.get('recurrings', this.editingId) } : { active: true };
     const obj = {
       ...base, type, label, amount: U.round2(amount), day, startDate, endDate, accountId, kind,
+      variable: variable || null,
       toAccountId: type === 'transfer' ? toAccountId : null,
       category: type === 'transfer' ? null : document.getElementById('recCategory').value
     };
     App.closeDialog('dlgRecurring');
     Store.save('recurrings', obj).catch(e => App.fail(e));
     App.toast(this.editingId ? 'Récurrence modifiée' : kind === 'subscription' ? 'Abonnement ajouté' : 'Récurrence ajoutée');
+  },
+
+  skip(key) {
+    const [recId, monthKey] = String(key).split('|');
+    Store.skipOccurrence(recId, monthKey).catch(e => App.fail(e));
+    App.toast('Occurrence ignorée pour ce mois');
   },
 
   toggle(id) {

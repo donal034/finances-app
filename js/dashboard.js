@@ -33,6 +33,15 @@ const Dashboard = {
     if (isCurrent && proj.hasCurrent && proj.endOfMonth < 0) {
       alerts.push(`Solde prévu de tes comptes courants au ${U.longDate(proj.monthEnd)} : ${U.money(proj.endOfMonth)}`);
     }
+    if (isCurrent) {
+      Store.overdraftForecast(45).filter(o => !o.now).forEach(o => {
+        alerts.push(`${U.esc(o.account.name)} passerait en négatif le ${U.longDate(o.date)} : ${U.money(o.balance)}`);
+      });
+      const pending = Store.pendingVariable();
+      if (pending.length) {
+        alerts.push(`${pending.length} opération${pending.length > 1 ? 's' : ''} à montant variable à confirmer dans Récurrents`);
+      }
+    }
 
     const name = App.firstName();
     const debtLine = debts.owe || debts.owed

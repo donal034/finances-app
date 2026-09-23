@@ -55,7 +55,12 @@ const Store = {
   },
 
   defaultSettings() {
-    return { monthlyBudget: 1500, categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)), categoryBudgets: [] };
+    return {
+      monthlyBudget: 1500,
+      categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
+      categoryBudgets: [],
+      rules: []
+    };
   },
 
   attach() {
@@ -77,7 +82,8 @@ const Store = {
           expense: this.toArray(cats.expense, DEFAULT_CATEGORIES.expense),
           income: this.toArray(cats.income, DEFAULT_CATEGORIES.income)
         },
-        categoryBudgets: this.toBudgetList(s.categoryBudgets)
+        categoryBudgets: this.toBudgetList(s.categoryBudgets),
+        rules: this.toRuleList(s.rules)
       };
       this.data = d;
 
@@ -106,6 +112,36 @@ const Store = {
   toBudgetList(x) {
     const arr = Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.values(x) : []);
     return arr.filter(b => b && b.c && Number(b.a) > 0).map(b => ({ c: String(b.c), a: Number(b.a) }));
+  },
+
+  toRuleList(x) {
+    const arr = Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.values(x) : []);
+    return arr.filter(r => r && r.m && r.c).map(r => ({ m: String(r.m), c: String(r.c) }));
+  },
+
+  /* ---------- Règles de catégorisation ---------- */
+
+  // Première règle dont le motif apparaît dans le libellé
+  categoryForLabel(label) {
+    const l = U.norm(label);
+    if (!l) return null;
+    const hit = this.data.settings.rules.find(r => l.includes(U.norm(r.m)));
+    return hit ? hit.c : null;
+  },
+
+  // Applique les règles aux opérations existantes.
+  // onlyVague : seulement celles sans catégorie ou en « Autre ».
+  applyRules(onlyVague = true) {
+    const u = {};
+    let n = 0;
+    this.list('transactions').forEach(t => {
+      if (t.type === 'transfer' || t.thirdParty) return;
+      if (onlyVague && t.category && t.category !== 'Autre') return;
+      const c = this.categoryForLabel(t.label);
+      if (c && c !== t.category) { u[`transactions/${t.id}/category`] = c; n++; }
+    });
+    if (n) this.applyUpdates(u).catch(e => App.fail(e));
+    return n;
   },
 
   /* ---------- Lecture ---------- */
@@ -198,6 +234,32 @@ const Store = {
     return { owe: U.round2(owe), owed: U.round2(owed) };
   },
 
+  /* ---------- Argent détenu pour le compte de tiers ---------- */
+
+  // Positif : tu détiens encore leur argent. Négatif : tu as avancé de l'argent.
+  thirdPartyTotals(prefix = '') {
+    const by = {};
+    this.list('transactions').forEach(t => {
+      if (!t.thirdParty || (prefix && !(t.date || '').startsWith(prefix))) return;
+      const who = t.person || 'Non précisé';
+      const e = by[who] || (by[who] = { person: who, in: 0, out: 0, count: 0, last: '' });
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'income') e.in += amt; else e.out += amt;
+      e.count++;
+      if ((t.date || '') > e.last) e.last = t.date;
+    });
+    return Object.values(by).map(e => ({
+      ...e, in: U.round2(e.in), out: U.round2(e.out), held: U.round2(e.in - e.out)
+    })).sort((a, b) => Math.abs(b.held) - Math.abs(a.held) || b.count - a.count);
+  },
+
+  knownPersons() {
+    const set = new Set();
+    this.list('transactions').forEach(t => { if (t.person) set.add(t.person); });
+    this.list('debts').forEach(d => { if (d.name) set.add(d.name); });
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  },
+
   /* ---------- Historique du patrimoine (calculé, rien n'est stocké) ---------- */
 
   // Comptes suivis et dettes, en fin de mois. Les investissements sont exclus :
@@ -259,6 +321,24 @@ const Store = {
     return (ids.has(r.toAccountId) ? amt : 0) - (ids.has(r.accountId) ? amt : 0);
   },
 
+  // Premier jour où un compte courant passerait en négatif
+  overdraftForecast(days = 45) {
+    const out = [];
+    this.activeAccounts()
+      .filter(a => CURRENT_ACCOUNT_TYPES.includes(a.type))
+      .forEach(a => {
+        const ids = new Set([a.id]);
+        let run = this.balance(a.id);
+        let hit = run < 0 ? { account: a, date: U.today(), balance: run, now: true } : null;
+        this.upcoming(days).forEach(e => {
+          run = U.round2(run + this.eventEffect(e, ids));
+          if (!hit && run < 0) hit = { account: a, date: e.date, balance: run, now: false };
+        });
+        if (hit) out.push(hit);
+      });
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  },
+
   // Solde prévu des comptes courants, échéance par échéance
   projection(days = 45) {
     const ids = this.currentAccountIds();
@@ -279,6 +359,7 @@ const Store = {
     let income = 0, expense = 0;
     this.list('transactions').forEach(t => {
       if ((t.date || '').slice(0, 7) !== key) return;
+      if (t.thirdParty) return;
       if (t.type === 'income') income += Number(t.amount) || 0;
       else if (t.type === 'expense') expense += Number(t.amount) || 0;
     });
@@ -292,7 +373,7 @@ const Store = {
   categoryTotals(prefix, type = 'expense') {
     const totals = {};
     this.list('transactions').forEach(t => {
-      if (t.type !== type || !(t.date || '').startsWith(prefix)) return;
+      if (t.thirdParty || t.type !== type || !(t.date || '').startsWith(prefix)) return;
       const c = t.category || 'Autre';
       totals[c] = (totals[c] || 0) + (Number(t.amount) || 0);
     });
@@ -375,7 +456,7 @@ const Store = {
     let count = 0;
 
     this.list('recurrings').forEach(r => {
-      if (!r.active || !r.startDate || !(Number(r.amount) > 0)) return;
+      if (!r.active || r.variable || !r.startDate || !(Number(r.amount) > 0)) return;
       const skipped = r.skipped || {};
       let key = r.startDate.slice(0, 7);
       let guard = 0;
@@ -404,6 +485,32 @@ const Store = {
 
     if (count) this.ref.update(updates).catch(e => App.fail(e));
     return count;
+  },
+
+  // Occurrences de récurrences à montant variable dont la date est passée
+  // et qui n'ont pas encore été confirmées.
+  pendingVariable() {
+    const today = U.today();
+    const out = [];
+    this.list('recurrings').forEach(r => {
+      if (!r.active || !r.variable || !r.startDate) return;
+      const skipped = r.skipped || {};
+      let key = r.startDate.slice(0, 7);
+      let guard = 0;
+      while (key <= today.slice(0, 7) && guard++ < 600) {
+        const date = this.occurrenceDate(r, key);
+        if (date >= r.startDate && date <= today && (!r.endDate || date <= r.endDate)
+            && !skipped[key] && !this.data.transactions[this.recurringTxId(r.id, key)]) {
+          out.push({ date, monthKey: key, item: r, kind: 'recurring' });
+        }
+        key = U.addMonths(key, 1);
+      }
+    });
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  },
+
+  skipOccurrence(recId, monthKey) {
+    return this.applyUpdates({ [`recurrings/${recId}/skipped/${monthKey}`]: true });
   },
 
   nextOccurrence(r) {

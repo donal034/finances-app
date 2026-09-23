@@ -92,6 +92,11 @@ const U = {
     return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
   },
 
+  // Comparaison insensible à la casse et aux accents (règles de catégorisation)
+  norm(s) {
+    return String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  },
+
   ICONS: {
     'Logement': '⌂', 'Alimentation': '🛒', 'Restaurants': '🍽', 'Transport': '🚆', 'Santé': '⚕',
     'Loisirs': '♪', 'Abonnements': '↻', 'Shopping': '🛍', 'Famille': '♥', 'Éducation': '✎',
