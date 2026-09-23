@@ -585,6 +585,28 @@ body.privacy .money:hover { filter: none; }
   .history-labels { font-size: .62rem; }
 }
 
+/* ===== V1.2 : flux pour autrui, règles, confirmations ===== */
+.third { color: var(--blue); }
+.tx b.third { color: var(--blue); }
+.pending { border-color: #fbbf2455; background: linear-gradient(150deg, #2a2413, var(--panel)); margin-bottom: 16px; }
+.pending .ico { background: #fbbf2422; color: var(--amber); font-weight: 700; }
+
+.rule-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.rule-row input, .rule-row select {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: #0a1423;
+  border-radius: 10px;
+  min-width: 0;
+}
+.rule-row input:focus, .rule-row select:focus { outline: none; border-color: var(--mint); }
+.rules-card .empty { padding: 10px; }
+
+@media (max-width: 640px) {
+  .rule-row { grid-template-columns: 1fr auto; }
+  .rule-row select { grid-column: 1 / 2; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
