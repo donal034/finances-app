@@ -4,11 +4,15 @@ Application web de gestion de finances personnelles : comptes, opérations, vire
 
 **Démo :** https://donal034.github.io/finances-app
 
-## Fonctionnalités (V1.1)
+## Fonctionnalités (V1.2)
 
 - **Comptes** : courant, Livret A, LEP, PEA, assurance-vie, etc. Solde calculé à partir du solde de départ et des opérations ; « Corriger le solde » l'aligne sur le relevé bancaire. Archivage des comptes clôturés.
 - **Opérations** : revenus, dépenses et virements entre comptes (les virements ne faussent ni les revenus ni les dépenses). Modification complète, notes, filtres et recherche.
 - **Budgets** : budget global et plafonds par catégorie, alertes à 80 % et 100 %, suivi des dépenses hors budget.
+- **Argent pour autrui** : les cotisations encaissées puis reversées sont marquées comme telles. Elles modifient le solde du compte mais sortent des revenus, des dépenses et des budgets, avec un solde par personne.
+- **Règles de catégorisation** : « le libellé contient NAVIGO » vers Transport. Appliquées pendant la saisie, ou d'un clic à l'historique.
+- **Montants variables** : une récurrence peut attendre confirmation chaque mois (intérim, allocations). L'app propose le dernier montant et retient celui que tu confirmes.
+- **Découvert anticipé** : alerte sur le premier jour où un compte courant passerait en négatif, d'après les échéances à venir.
 - **Récurrents** : salaire, loyer ou épargne automatique créés chaque mois sans doublon, même depuis plusieurs appareils. Onglet **Abonnements** (coût mensuel et annuel, résiliation) et **Échéancier** sur 45 jours avec le solde prévu des comptes courants.
 - **Dettes et prêts** : ce que je dois, ce qu'on me doit, remboursements (avec création optionnelle de l'opération sur le compte), échéances et retards.
 - **Objectifs** : montant cible, échéance, effort mensuel calculé ; un objectif peut suivre le solde d'un compte.
@@ -70,7 +74,7 @@ npm install
 npm test
 ```
 
-84 vérifications : parcours complets dans un navigateur simulé (jsdom), Firebase simulé avec synchronisation entre appareils, et évaluation des règles de `database.rules.json` sur chaque écriture de l'application.
+113 vérifications : parcours complets dans un navigateur simulé (jsdom), Firebase simulé avec synchronisation entre appareils, et évaluation des règles de `database.rules.json` sur chaque écriture de l'application.
 
 ## Stack
 

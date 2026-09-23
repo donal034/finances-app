@@ -88,6 +88,10 @@
     <div class="field"><label for="txLabel">Libellé</label><input id="txLabel" maxlength="120" autocomplete="off"></div>
     <div class="field"><label for="txAccount" id="lblTxAccount">Compte</label><select id="txAccount"></select></div>
     <div class="field" id="fieldToAccount" hidden><label for="txToAccount">Vers le compte</label><select id="txToAccount"></select></div>
+    <label class="check" id="fieldThird"><input type="checkbox" id="txThird"> Pour le compte d’un tiers (cotisation, argent à reverser)</label>
+    <div class="field" id="fieldPerson" hidden><label for="txPerson">Pour qui ?</label>
+      <input id="txPerson" maxlength="80" list="personsList" autocomplete="off" placeholder="Prénom ou nom">
+      <datalist id="personsList"></datalist></div>
     <div class="field" id="fieldCategory"><label for="txCategory">Catégorie</label><select id="txCategory"></select></div>
     <div class="field"><label for="txNote">Note (facultatif)</label><input id="txNote" maxlength="200" autocomplete="off"></div>
     <div class="form-actions">
@@ -153,6 +157,7 @@
     <div class="field" id="fieldRecTo" hidden><label for="recToAccount">Vers le compte</label><select id="recToAccount"></select></div>
     <div class="field" id="fieldRecCat"><label for="recCategory">Catégorie</label><select id="recCategory"></select></div>
     <label class="check" id="fieldRecSub"><input type="checkbox" id="recSub"> C’est un abonnement (téléphone, streaming, salle de sport…)</label>
+    <label class="check"><input type="checkbox" id="recVariable"> Montant variable (intérim, allocations) : à confirmer chaque mois</label>
     <div class="row-2">
       <div class="field"><label for="recStart">À partir du</label><input id="recStart" type="date"></div>
       <div class="field"><label for="recEnd">Jusqu’au (facultatif)</label><input id="recEnd" type="date"></div>
