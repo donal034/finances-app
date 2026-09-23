@@ -610,3 +610,5 @@ body.privacy .money:hover { filter: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+.more { text-align: center; padding: 14px 0 4px; }
