@@ -5,6 +5,8 @@ const Transactions = {
   editingId: null,
   forcedId: null,        // confirmation d'une récurrence à montant variable
   forcedRecurringId: null,
+  limit: 60,          // pagination : nombre de lignes affichées
+  searchTimer: null,
   filters: { all: false, type: '', account: '', category: '', q: '', scope: '' },
 
   render(el) {
@@ -36,12 +38,17 @@ const Transactions = {
       <div class="card"><div class="list" id="txList"></div></div>`;
 
     const on = (id, ev, fn) => el.querySelector(id).addEventListener(ev, fn);
-    on('#fQ', 'input', e => { f.q = e.target.value; this.renderList(); });
-    on('#fType', 'change', e => { f.type = e.target.value; this.renderList(); });
-    on('#fAccount', 'change', e => { f.account = e.target.value; this.renderList(); });
-    on('#fCategory', 'change', e => { f.category = e.target.value; this.renderList(); });
-    on('#fScope', 'change', e => { f.scope = e.target.value; this.renderList(); });
-    on('#fAll', 'change', e => { f.all = e.target.checked; this.render(el); });
+    // recherche : on attend une courte pause avant de redessiner la liste
+    on('#fQ', 'input', e => {
+      f.q = e.target.value;
+      clearTimeout(this.searchTimer);
+      this.searchTimer = setTimeout(() => { this.limit = 60; this.renderList(); }, 180);
+    });
+    on('#fType', 'change', e => { f.type = e.target.value; this.limit = 60; this.renderList(); });
+    on('#fAccount', 'change', e => { f.account = e.target.value; this.limit = 60; this.renderList(); });
+    on('#fCategory', 'change', e => { f.category = e.target.value; this.limit = 60; this.renderList(); });
+    on('#fScope', 'change', e => { f.scope = e.target.value; this.limit = 60; this.renderList(); });
+    on('#fAll', 'change', e => { f.all = e.target.checked; this.limit = 60; this.render(el); });
     this.renderList();
   },
 
@@ -72,10 +79,19 @@ const Transactions = {
     const sum = document.getElementById('txSummary');
     const box = document.getElementById('txList');
     if (!sum || !box) return;
-    sum.innerHTML = `<span>${list.length} opération${list.length > 1 ? 's' : ''}</span>
+    const shown = list.slice(0, this.limit);
+    sum.innerHTML = `<span>${list.length} opération${list.length > 1 ? 's' : ''}${list.length > shown.length ? ` – ${shown.length} affichées` : ''}</span>
       <span>Entrées ${U.money(inc, 'positive')} · Sorties ${U.money(exp, 'negative')}${third ? ` · Pour autrui ${U.money(third, 'third')}` : ''}</span>`;
-    box.innerHTML = list.length ? list.map(t => this.row(t, true)).join('')
+    box.innerHTML = list.length ? shown.map(t => this.row(t, true)).join('')
+        + (list.length > shown.length
+          ? `<div class="more"><button class="btn" data-act="transactions.more">Afficher ${Math.min(200, list.length - shown.length)} opérations de plus</button></div>`
+          : '')
       : '<p class="empty">Aucune opération ne correspond. Ajoute-en une avec le bouton ＋.</p>';
+  },
+
+  more() {
+    this.limit += 200;
+    this.renderList();
   },
 
   row(t, actions) {

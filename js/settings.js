@@ -46,6 +46,15 @@ const Settings = {
         </div>
 
         <div class="card">
+          <h2>Nettoyage</h2>
+          <p class="muted small">Supprime les opérations antérieures à une date et recale les récurrences sur cette date. Utile après avoir créé une récurrence avec une date de début trop ancienne.</p>
+          <div class="field"><label for="purgeDate">Supprimer les opérations avant le</label>
+            <input id="purgeDate" type="date"></div>
+          <p class="small" id="purgeInfo"></p>
+          <button class="btn danger" id="purgeBtn">Supprimer ces opérations</button>
+        </div>
+
+        <div class="card">
           <h2>Compte</h2>
           <p class="small">Connecté en tant que <strong>${U.esc(u.email || '')}</strong></p>
           <p class="muted small">Identifiant : <code>${U.esc(u.uid || '')}</code></p>
@@ -69,6 +78,16 @@ const Settings = {
     el.querySelector('#exportCsv').addEventListener('click', () => this.exportCsv());
     el.querySelector('#importJson').addEventListener('change', e => this.importJson(e.target));
     el.querySelector('#wipeAll').addEventListener('click', () => this.wipe());
+    const pd = el.querySelector('#purgeDate');
+    pd.value = U.today().slice(0, 4) + '-01-01';
+    const refresh = () => {
+      const n = pd.value ? Store.countBefore(pd.value) : 0;
+      el.querySelector('#purgeInfo').textContent = pd.value
+        ? `${n} opération${n > 1 ? 's' : ''} seraient supprimées.` : 'Choisis une date.';
+    };
+    pd.addEventListener('change', refresh);
+    refresh();
+    el.querySelector('#purgeBtn').addEventListener('click', () => this.purge(pd.value));
   },
 
   ruleRow(rule) {
@@ -168,6 +187,15 @@ const Settings = {
       Store.importAll(obj).then(() => App.toast('Sauvegarde restaurée')).catch(e => App.fail(e));
     };
     reader.readAsText(file);
+  },
+
+  purge(date) {
+    if (!date) return App.toast('Choisis une date', 'error');
+    const n = Store.countBefore(date);
+    if (!n) return App.toast('Aucune opération avant cette date');
+    if (!confirm(`Supprimer définitivement ${n} opération(s) antérieure(s) au ${U.longDate(date)} ?\nLes récurrences seront recalées sur cette date pour ne pas les recréer.`)) return;
+    Store.purgeBefore(date);
+    App.toast(`${n} opération${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''}`);
   },
 
   wipe() {

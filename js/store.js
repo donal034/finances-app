@@ -527,6 +527,30 @@ const Store = {
     return null;
   },
 
+  /* ---------- Nettoyage ---------- */
+
+  countBefore(date) {
+    return this.list('transactions').filter(t => (t.date || '') < date).length;
+  },
+
+  // Supprime les opérations antérieures à une date et recale les récurrences
+  // sur cette date, pour qu'elles ne soient pas régénérées.
+  purgeBefore(date) {
+    const u = {};
+    let n = 0;
+    this.list('transactions').forEach(t => {
+      if ((t.date || '') < date) { u['transactions/' + t.id] = null; n++; }
+    });
+    this.list('recurrings').forEach(r => {
+      if (r.startDate && r.startDate < date) u[`recurrings/${r.id}/startDate`] = date;
+      Object.keys(r.skipped || {}).forEach(k => {
+        if (k < date.slice(0, 7)) u[`recurrings/${r.id}/skipped/${k}`] = null;
+      });
+    });
+    if (Object.keys(u).length) this.applyUpdates(u).catch(e => App.fail(e));
+    return n;
+  },
+
   /* ---------- Import / export ---------- */
 
   exportAll() {
