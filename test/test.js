@@ -344,6 +344,112 @@ const eur = n => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: '
   await S.deleteTransaction('x6'); await tick();
   state.rejected.length = 0;
 
+  console.log('\n8g. Flux pour le compte d’un tiers');
+  const mt0 = S.monthTotals(today.slice(0, 7));
+  const bal0 = S.balance(hello);
+  w.eval('Transactions.openNew()');
+  setVal(d, 'txType', 'income'); setVal(d, 'txAmount', '2000'); setVal(d, 'txLabel', 'Cotisation reçue');
+  setVal(d, 'txAccount', hello); setVal(d, 'txDate', today);
+  d.getElementById('txThird').checked = true;
+  d.getElementById('txThird').dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok(!d.getElementById('fieldPerson').hidden && d.getElementById('fieldCategory').hidden, 'champ « pour qui » affiché, catégorie masquée');
+  setVal(d, 'txPerson', 'Marielle');
+  submit(d, 'txForm'); await tick();
+  const mt1 = S.monthTotals(today.slice(0, 7));
+  ok(mt1.income === mt0.income, '2 000 € reçus pour autrui : revenus inchangés');
+  ok(S.balance(hello) === U2(bal0 + 2000), 'mais le solde du compte augmente bien');
+  w.eval('Transactions.openNew()');
+  setVal(d, 'txType', 'expense'); setVal(d, 'txAmount', '2000'); setVal(d, 'txLabel', 'Reversé à Marielle');
+  setVal(d, 'txAccount', hello); setVal(d, 'txDate', today);
+  d.getElementById('txThird').checked = true;
+  d.getElementById('txThird').dispatchEvent(new w.Event('change', { bubbles: true }));
+  setVal(d, 'txPerson', 'Marielle');
+  submit(d, 'txForm'); await tick();
+  const mt2 = S.monthTotals(today.slice(0, 7));
+  ok(mt2.expense === mt0.expense && mt2.income === mt0.income, 'reversement : dépenses inchangées');
+  ok(S.balance(hello) === bal0, 'le compte revient à son solde initial');
+  const tp = S.thirdPartyTotals();
+  const marielle = tp.find(x => x.person === 'Marielle');
+  ok(marielle && marielle.held === 0 && marielle.count === 2, 'Marielle : 2 000 € reçus, 2 000 € reversés, solde 0');
+  ok(!S.categoryTotals(today.slice(0, 7), 'expense').some(c => c[0] === 'Autre' && c[1] >= 2000), 'les flux tiers sortent aussi des catégories');
+  w.eval('App.go("debts")'); w.eval('Debts.setTab("third")');
+  ok(text(d.getElementById('sec-debts')).includes('Marielle'), 'onglet « Argent pour autrui » affiché');
+  w.eval('Debts.setTab("debts")');
+
+  console.log('\n8h. Règles de catégorisation');
+  await S.saveSettings({ ...S.data.settings, rules: [
+    { m: 'NAVIGO', c: 'Transport' }, { m: 'basic fit', c: 'Abonnements' }, { m: 'Djeukam', c: 'Logement' }
+  ] }); await tick();
+  ok(S.categoryForLabel('DU 290726 SERVICE NAVIGO') === 'Transport', 'libellé BNP « SERVICE NAVIGO » reconnu');
+  ok(S.categoryForLabel('PRLV SEPA BASIC FIT FRANCE') === 'Abonnements', 'règle insensible à la casse');
+  ok(S.categoryForLabel('LOYER /BEN M DJEUKAM CLAUDE') === 'Logement', 'règle insensible aux accents et à la casse');
+  ok(S.categoryForLabel('AUCHAN CERGY') === null, 'aucune règle : pas de catégorie imposée');
+  w.eval('App.go("transactions")');
+  w.eval('Transactions.openNew()');
+  const lbl = d.getElementById('txLabel');
+  lbl.value = 'SERVICE NAVIGO';
+  lbl.dispatchEvent(new w.Event('input', { bubbles: true }));
+  ok(d.getElementById('txCategory').value === 'Transport', 'catégorie proposée pendant la saisie');
+  setVal(d, 'txAmount', '90,80'); setVal(d, 'txAccount', hello); setVal(d, 'txDate', today);
+  submit(d, 'txForm'); await tick();
+  ok(!!S.list('transactions').find(t => t.label === 'SERVICE NAVIGO' && t.category === 'Transport'), 'opération enregistrée en Transport');
+  await S.save('transactions', { type: 'expense', label: 'PRLV BASIC FIT FRANCE', amount: 34.99, date: today, accountId: hello, category: 'Autre' });
+  await tick();
+  const applied = S.applyRules(true); await tick();
+  ok(applied === 1, 'application aux opérations existantes : 1 opération recatégorisée');
+  ok(S.list('transactions').find(t => t.label === 'PRLV BASIC FIT FRANCE').category === 'Abonnements', 'Basic Fit passé en Abonnements');
+
+  console.log('\n8i. Récurrences à montant variable');
+  const dayToday = Number(today.slice(8));
+  w.eval('Recurring.openNew()');
+  setVal(d, 'recType', 'income'); setVal(d, 'recAmount', '417,67'); setVal(d, 'recLabel', 'Enjoi by Samsic');
+  setVal(d, 'recDay', String(dayToday)); setVal(d, 'recStart', today); setVal(d, 'recAccount', hello);
+  setVal(d, 'recCategory', 'Salaire');
+  d.getElementById('recVariable').checked = true;
+  submit(d, 'recForm'); await tick();
+  const enjoi = S.list('recurrings').find(r => r.label === 'Enjoi by Samsic');
+  ok(enjoi && enjoi.variable === true, 'récurrence marquée à montant variable');
+  ok(!S.list('transactions').some(t => t.label === 'Enjoi by Samsic'), 'aucune opération créée automatiquement');
+  const pend = S.pendingVariable();
+  ok(pend.length === 1 && pend[0].date === today, 'occurrence en attente de confirmation');
+  w.eval('App.go("dashboard")');
+  ok(text(d.getElementById('sec-dashboard')).includes('à confirmer'), 'alerte sur le tableau de bord');
+  w.eval('App.go("recurring")'); w.eval('Recurring.setTab("upcoming")');
+  ok(text(d.getElementById('sec-recurring')).includes('À confirmer'), 'bloc « À confirmer » dans l’échéancier');
+  const incBefore = S.monthTotals(today.slice(0, 7)).income;
+  w.eval(`Transactions.confirmRecurring(${JSON.stringify(enjoi.id + '|' + today.slice(0, 7))})`);
+  ok(d.getElementById('txAmount').value === '417,67', 'dialogue pré-rempli avec le dernier montant');
+  setVal(d, 'txAmount', '556,80');
+  submit(d, 'txForm'); await tick();
+  ok(S.monthTotals(today.slice(0, 7)).income === U2(incBefore + 556.8), 'montant réel enregistré en revenu');
+  ok(S.get('recurrings', enjoi.id).amount === 556.8, 'la récurrence retient le dernier montant confirmé');
+  ok(S.pendingVariable().length === 0, 'plus rien à confirmer');
+  S.generateRecurring(); await tick();
+  ok(S.list('transactions').filter(t => t.label === 'Enjoi by Samsic').length === 1, 'pas de doublon après génération');
+
+  console.log('\n8j. Alerte de découvert anticipé');
+  const bnp = acc('BNP – Courant').id;
+  w.eval('Recurring.openNew()');
+  setVal(d, 'recType', 'expense'); setVal(d, 'recAmount', '526'); setVal(d, 'recLabel', 'Loyer');
+  setVal(d, 'recDay', String(Math.min(28, dayToday + 2))); setVal(d, 'recStart', today);
+  setVal(d, 'recAccount', bnp); setVal(d, 'recCategory', 'Logement');
+  submit(d, 'recForm'); await tick();
+  const fcBnp = S.overdraftForecast(45).find(o => o.account.id === bnp);
+  ok(fcBnp && fcBnp.now === true, 'compte BNP déjà à découvert aujourd’hui : signalé comme tel, pas comme une prévision');
+
+  // Compte créditeur aujourd’hui, mais qui bascule avec une échéance à venir
+  w.eval('Recurring.openNew()');
+  setVal(d, 'recType', 'expense'); setVal(d, 'recAmount', '5000'); setVal(d, 'recLabel', 'Gros prélèvement');
+  setVal(d, 'recDay', String(Math.min(28, dayToday + 3))); setVal(d, 'recStart', today);
+  setVal(d, 'recAccount', hello); setVal(d, 'recCategory', 'Autre');
+  submit(d, 'recForm'); await tick();
+  const fcHello = S.overdraftForecast(45).find(o => o.account.id === hello);
+  ok(fcHello && fcHello.now === false && fcHello.balance < 0, `découvert anticipé sur le compte courant le ${fcHello ? fcHello.date : '?'}`);
+  w.eval('App.go("dashboard")');
+  ok(text(d.getElementById('sec-dashboard')).includes('passerait en négatif'), 'alerte affichée sur le tableau de bord');
+  const gros = S.list('recurrings').find(r => r.label === 'Gros prélèvement');
+  await S.remove('recurrings', gros.id); await tick();
+
   console.log('\n9. Toutes les vues s’affichent sans erreur');
   for (const v of ['dashboard', 'transactions', 'budgets', 'accounts', 'recurring', 'goals', 'debts', 'investments', 'reports', 'settings']) {
     w.eval(`App.go("${v}")`);
