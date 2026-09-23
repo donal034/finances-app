@@ -4,7 +4,7 @@ Application web de gestion de finances personnelles : comptes, opérations, vire
 
 **Démo :** https://donal034.github.io/finances-app
 
-## Fonctionnalités (V1.2)
+## Fonctionnalités (V1.3)
 
 - **Comptes** : courant, Livret A, LEP, PEA, assurance-vie, etc. Solde calculé à partir du solde de départ et des opérations ; « Corriger le solde » l'aligne sur le relevé bancaire. Archivage des comptes clôturés.
 - **Opérations** : revenus, dépenses et virements entre comptes (les virements ne faussent ni les revenus ni les dépenses). Modification complète, notes, filtres et recherche.
@@ -19,6 +19,8 @@ Application web de gestion de finances personnelles : comptes, opérations, vire
 - **Investissements** : montant investi, valeur actuelle, plus-value, répartition.
 - **Rapports** : synthèse du mois, graphique annuel, principales catégories, évolution du patrimoine sur 12 mois (calculée à partir des opérations, rien n'est stocké).
 - **Tableau de bord** : patrimoine net (comptes + investissements + créances − dettes), budgets, échéances à venir, alertes.
+- **Gros historique** : la liste des opérations s'affiche par pages de 60 avec un bouton « afficher plus », et la recherche est temporisée. Testé avec 1 750 opérations : 83 ms au lieu de 1 317 ms.
+- **Nettoyage** : suppression des opérations antérieures à une date, avec recalage des récurrences (utile après une date de début trop ancienne).
 - **Données** : sauvegarde et restauration JSON, export CSV pour Excel, migration depuis l'ancienne version locale.
 - **Mobile** : installable sur l'écran d'accueil, bouton d'ajout rapide, mode discret qui floute les montants.
 
@@ -74,7 +76,7 @@ npm install
 npm test
 ```
 
-113 vérifications : parcours complets dans un navigateur simulé (jsdom), Firebase simulé avec synchronisation entre appareils, et évaluation des règles de `database.rules.json` sur chaque écriture de l'application.
+121 vérifications : parcours complets dans un navigateur simulé (jsdom), Firebase simulé avec synchronisation entre appareils, et évaluation des règles de `database.rules.json` sur chaque écriture de l'application.
 
 ## Stack
 
