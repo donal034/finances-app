@@ -4,7 +4,7 @@ Application web de gestion de finances personnelles : comptes, opérations, vire
 
 **Démo :** https://donal034.github.io/finances-app
 
-## Fonctionnalités (V1.3)
+## Fonctionnalités (V1.5)
 
 - **Comptes** : courant, Livret A, LEP, PEA, assurance-vie, etc. Solde calculé à partir du solde de départ et des opérations ; « Corriger le solde » l'aligne sur le relevé bancaire. Archivage des comptes clôturés.
 - **Opérations** : revenus, dépenses et virements entre comptes (les virements ne faussent ni les revenus ni les dépenses). Modification complète, notes, filtres et recherche.
@@ -19,6 +19,7 @@ Application web de gestion de finances personnelles : comptes, opérations, vire
 - **Investissements** : montant investi, valeur actuelle, plus-value, répartition.
 - **Rapports** : synthèse du mois, graphique annuel, principales catégories, évolution du patrimoine sur 12 mois (calculée à partir des opérations, rien n'est stocké).
 - **Tableau de bord** : patrimoine net (comptes + investissements + créances − dettes), budgets, échéances à venir, alertes.
+- **Brief quotidien** : e-mail et SMS chaque matin, via une tâche GitHub Actions gratuite — soldes, solde prévu en fin de mois, alertes de découvert et de budget, échéances de la semaine. Voir `notify/README.md`.
 - **Gros historique** : la liste des opérations s'affiche par pages de 60 avec un bouton « afficher plus », et la recherche est temporisée. Testé avec 1 750 opérations : 83 ms au lieu de 1 317 ms.
 - **Nettoyage** : suppression des opérations antérieures à une date, avec recalage des récurrences (utile après une date de début trop ancienne).
 - **Données** : sauvegarde et restauration JSON, export CSV pour Excel, migration depuis l'ancienne version locale.
@@ -47,6 +48,8 @@ js/
 database.rules.json    Règles de sécurité et de validation de la base
 manifest.webmanifest   Installation sur l'écran d'accueil
 icons/                 Icônes de l'application
+notify/                Brief quotidien par e-mail et SMS (script, tests, guide)
+.github/workflows/     Tâche planifiée GitHub Actions
 test/test.js           Tests automatisés (navigateur simulé, Firebase simulé, règles évaluées)
 ```
 
@@ -76,7 +79,7 @@ npm install
 npm test
 ```
 
-121 vérifications : parcours complets dans un navigateur simulé (jsdom), Firebase simulé avec synchronisation entre appareils, et évaluation des règles de `database.rules.json` sur chaque écriture de l'application.
+121 vérifications pour l'application, plus 23 pour le brief quotidien (`node notify/test-brief.js`) : parcours complets dans un navigateur simulé (jsdom), Firebase simulé avec synchronisation entre appareils, et évaluation des règles de `database.rules.json` sur chaque écriture de l'application.
 
 ## Stack
 

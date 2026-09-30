@@ -450,6 +450,37 @@ const eur = n => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: '
   const gros = S.list('recurrings').find(r => r.label === 'Gros prélèvement');
   await S.remove('recurrings', gros.id); await tick();
 
+  console.log('\n8k. Nettoyage des opérations trop anciennes');
+  const oldRec = S.list('recurrings').find(r => r.label === 'Salaire');
+  const cutoff = w.eval('U.addMonths(U.today().slice(0,7), -1)') + '-01';
+  const beforeCount = S.countBefore(cutoff);
+  ok(beforeCount > 0, `${beforeCount} opération(s) antérieures détectées`);
+  const purged = S.purgeBefore(cutoff); await tick();
+  ok(purged === beforeCount && S.countBefore(cutoff) === 0, 'opérations anciennes supprimées');
+  ok(S.get('recurrings', oldRec.id).startDate === cutoff, 'la récurrence est recalée sur la date de coupe');
+  S.generateRecurring(); await tick();
+  ok(S.countBefore(cutoff) === 0, 'rien n’est régénéré avant la date de coupe');
+
+  console.log('\n8l. Pagination avec un gros historique');
+  const bulk = {};
+  for (let i = 0; i < 300; i++) {
+    const id = 'bulk' + i;
+    bulk['transactions/' + id] = { id, type: 'expense', label: 'Historique ' + i, amount: 10 + i,
+      date: today, accountId: hello, category: 'Autre', createdAt: i };
+  }
+  await S.applyUpdates(bulk); await tick();
+  w.eval('Transactions.limit = 60');
+  w.eval('App.go("transactions")');
+  let rows = d.querySelectorAll('#sec-transactions .tx').length;
+  ok(rows === 60, `60 lignes affichées sur ${S.filtered ? '' : ''}${S.monthTransactions(today.slice(0,7)).length} disponibles`);
+  ok(text($(d, '#txSummary')).includes('affichées'), 'le résumé indique le nombre affiché');
+  w.eval('Transactions.more()');
+  ok(d.querySelectorAll('#sec-transactions .tx').length > 60, 'le bouton « afficher plus » agrandit la liste');
+  const cleanup = {};
+  Object.keys(bulk).forEach(k => { cleanup[k] = null; });
+  await S.applyUpdates(cleanup); await tick();
+  ok(!S.list('transactions').some(t => String(t.id).startsWith('bulk')), 'jeu de test retiré');
+
   console.log('\n9. Toutes les vues s’affichent sans erreur');
   for (const v of ['dashboard', 'transactions', 'budgets', 'accounts', 'recurring', 'goals', 'debts', 'investments', 'reports', 'settings']) {
     w.eval(`App.go("${v}")`);
